@@ -17,6 +17,7 @@ const PdfViewer = () => {
   const [pageDetails, setPageDetails] = useState([]);
   const [currentLoadPage, setCurrentLoadPage] = useState({});
   const [DomActivePage, setDomActivePage] = useState([]);
+  const [topofTheParant,setTopofTheParant] = useState(0)
 
   const containerRef = useRef(null);
   const pageRefs = useRef([]);
@@ -73,20 +74,36 @@ const PdfViewer = () => {
 
         grandParent.appendChild(pageContainer);
 
-        if (containerRef.current && !pageRefs.current[pageNum - 1]) {
-          pageRefs.current[pageNum - 1] = grandParent;
-          containerRef.current.appendChild(grandParent);
-          setCurrentLoadPage((prev) => ({
-            start: 0,
-            end: pageNum,
-          }));
-        }
+        // if (containerRef.current && !pageRefs.current[pageNum - 1]) {
+        //   pageRefs.current[pageNum - 1] = grandParent;
+        //   containerRef.current.appendChild(grandParent);
+        //   setCurrentLoadPage((prev) => ({
+        //     start: 0,
+        //     end: pageNum,
+        //   }));
+        // }
 
-        resolve({ success: true, pageNumber: pageNum });
+        resolve({ success: true, pageNumber: pageNum, element: grandParent });
       } catch (error) {
         reject(error);
       }
     });
+  };
+
+  const appendChildElement = (element,pageNum ,wherToAppend) => {
+    if (containerRef.current && !pageRefs.current[pageNum - 1]) {
+      
+      if(wherToAppend ==='START'){
+        pageRefs.current[pageNum - 1] = element;
+        containerRef.current.insertBefore(element, containerRef.current.firstChild);
+      }
+      else if(wherToAppend ==='END'){
+        pageRefs.current[pageNum - 1] = element;
+        containerRef.current.appendChild(element);
+        
+      }
+    
+    }
   };
 
   useEffect(() => {
@@ -123,6 +140,7 @@ const PdfViewer = () => {
 
         if (response?.success === true) {
           validResponses.push(response.pageNumber);
+          appendChildElement(response.element,response.pageNumber ,"END");
         }
       }
       console.log(validResponses, "validResponses");
@@ -134,6 +152,17 @@ const PdfViewer = () => {
 
     renderAllPages();
   }, [pdf, numPages]);
+
+useEffect(()=>{
+
+  containerRef.current.style.top = `${topofTheParant}px`
+
+
+},[topofTheParant])
+
+
+
+
 
   useEffect(() => {
     removePageFromDom(currentPage);
@@ -151,6 +180,7 @@ const PdfViewer = () => {
 
     if (response?.success === true) {
       if (whereToRremove === "START") {
+        appendChildElement(response.element,response.pageNumber,'END')
         setDomActivePage((prev) => {
           const updatedArray = [...prev];
           const firstElement = updatedArray.shift();
@@ -160,10 +190,12 @@ const PdfViewer = () => {
         console.log("dom---------------", containerRef.current.firstChild);
         const element =
           containerRef.current.firstChild.getAttribute("data-page-number");
+         setTopofTheParant(prev=> containerRef.current.firstChild.offsetHeight + prev)  
         if (parseInt(element) == parseInt(DomActivePage[0])) {
+        
           containerRef.current.removeChild(containerRef.current.firstChild);
         }
-        
+
         console.log("deleted---------------", pageRefs.current[0]);
       }
     }
@@ -350,6 +382,7 @@ const PdfViewer = () => {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
+          position:'relative'
         }}
       >
         {numPages ? null : <p>Loading document...</p>}
