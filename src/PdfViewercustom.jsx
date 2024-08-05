@@ -17,10 +17,18 @@ const PdfViewer = () => {
   const [pageDetails, setPageDetails] = useState([]);
   const [currentLoadPage, setCurrentLoadPage] = useState({});
   const [DomActivePage, setDomActivePage] = useState([]);
-  const [topofTheParant,setTopofTheParant] = useState(0)
+  const [topofTheParant, setTopofTheParant] = useState(0);
 
   const containerRef = useRef(null);
   const pageRefs = useRef([]);
+
+  const pushTosetDomActivePage = (item) => {
+    setDomActivePage((prevStack) => [...prevStack, item]);
+  };
+
+  const popFromsetDomActivePage = () => {
+    setDomActivePage((prevStack) => prevStack.slice(0, -1));
+  };
 
   useEffect(() => {
     const loadDocument = async () => {
@@ -90,19 +98,18 @@ const PdfViewer = () => {
     });
   };
 
-  const appendChildElement = (element,pageNum ,wherToAppend) => {
+  const appendChildElement = (element, pageNum, wherToAppend) => {
     if (containerRef.current && !pageRefs.current[pageNum - 1]) {
-      
-      if(wherToAppend ==='START'){
+      if (wherToAppend === "START") {
         pageRefs.current[pageNum - 1] = element;
-        containerRef.current.insertBefore(element, containerRef.current.firstChild);
-      }
-      else if(wherToAppend ==='END'){
+        containerRef.current.insertBefore(
+          element,
+          containerRef.current.firstChild
+        );
+      } else if (wherToAppend === "END") {
         pageRefs.current[pageNum - 1] = element;
         containerRef.current.appendChild(element);
-        
       }
-    
     }
   };
 
@@ -140,10 +147,9 @@ const PdfViewer = () => {
 
         if (response?.success === true) {
           validResponses.push(response.pageNumber);
-          appendChildElement(response.element,response.pageNumber ,"END");
+          appendChildElement(response.element, response.pageNumber, "END");
         }
       }
-      console.log(validResponses, "validResponses");
       setDomActivePage(validResponses);
       containerRef.current.style.height = `${heightOfAllPage}px`;
 
@@ -153,19 +159,12 @@ const PdfViewer = () => {
     renderAllPages();
   }, [pdf, numPages]);
 
-useEffect(()=>{
-
-  containerRef.current.style.top = `${topofTheParant}px`
-
-
-},[topofTheParant])
-
-
-
-
+  useEffect(() => {
+    containerRef.current.style.top = `${topofTheParant}px`;
+  }, [topofTheParant]);
 
   useEffect(() => {
-    removePageFromDom(currentPage);
+    checkWheterRemovePage(currentPage);
   }, [currentPage]);
   const renderSinglePages = async (nexToLoad, whereToRremove) => {
     if (!pdf) return;
@@ -180,36 +179,58 @@ useEffect(()=>{
 
     if (response?.success === true) {
       if (whereToRremove === "START") {
-        appendChildElement(response.element,response.pageNumber,'END')
+        appendChildElement(response.element, response.pageNumber, "END");
         setDomActivePage((prev) => {
           const updatedArray = [...prev];
           const firstElement = updatedArray.shift();
           updatedArray.push(response.pageNumber);
           return updatedArray;
         });
-        console.log("dom---------------", containerRef.current.firstChild);
+
         const element =
           containerRef.current.firstChild.getAttribute("data-page-number");
-         setTopofTheParant(prev=> containerRef.current.firstChild.offsetHeight + prev)  
+        setTopofTheParant(
+          (prev) => containerRef.current.firstChild.offsetHeight + prev
+        );
         if (parseInt(element) == parseInt(DomActivePage[0])) {
-        
+          containerRef.current.removeChild(containerRef.current.firstChild);
+          // popFromsetDomActivePage()
+          // pushTosetDomActivePage(response.pageNumber)
+        }
+      }
+      if (whereToRremove === "END") {
+        appendChildElement(response.element, response.pageNumber, "START");
+
+        const element =
+          containerRef.current.lastChild.getAttribute("data-page-number");
+        setTopofTheParant(
+          (prev) => containerRef.current.firstChild.offsetHeight + prev
+        );
+        if (parseInt(element) == parseInt(DomActivePage[30])) {
           containerRef.current.removeChild(containerRef.current.firstChild);
         }
-
-        console.log("deleted---------------", pageRefs.current[0]);
+        setDomActivePage((prev) => {
+          const updatedArray = [response.pageNumber, ...prev];
+          updatedArray.pop();
+          return updatedArray;
+        });
       }
     }
   };
+  useEffect(() => {
+    console.log(DomActivePage, "DomActivePage");
+  }, DomActivePage);
 
-  const removePageFromDom = (currentPage) => {
+  const checkWheterRemovePage = (currentPage) => {
     const index = DomActivePage.findIndex((element) => element === currentPage);
+    console.log("indexindex", index);
     if (index === -1) {
       return null;
     }
     let nexToLoad = 0;
     let whereToRremove = null;
     if (currentPage >= 16) {
-      if (index > 15) {
+      if (index > parseInt(DomActivePage.length/2)) {
         // remove from first and -unshift
         // add last element -push
         console.log("scroll in to down >>>>");
@@ -219,15 +240,20 @@ useEffect(()=>{
         setupIntersectionObserver();
       }
     }
-    if (index < 15) {
+    if (index < 15 && currentPage > 15) {
       //pop
       // add to first
+      nexToLoad = currentPage - 14;
+      whereToRremove = "END";
       console.log("<<<pop add to first");
     }
     if (nexToLoad) {
       renderSinglePages(nexToLoad, whereToRremove);
     }
   };
+
+
+
   const setupIntersectionObserver = () => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -239,8 +265,11 @@ useEffect(()=>{
             entry.target.getAttribute("data-page-number"),
             10
           );
-          if (entry.intersectionRatio > maxIntersectionRatio) {
-            maxIntersectionRatio = entry.intersectionRatio;
+          const visibleArea =
+            entry.intersectionRect.width * entry.intersectionRect.height;
+
+          if (visibleArea > maxIntersectionRatio) {
+            maxIntersectionRatio = visibleArea;
             visiblePageNumber = pageNumber;
           }
         });
@@ -249,7 +278,7 @@ useEffect(()=>{
           setCurrentPage(visiblePageNumber);
         }
       },
-      { threshold: [0.5, 0.9, 1.0] }
+      { threshold: [0, 0.25, 0.5, 0.75, 1] }
     );
 
     if (pageRefs.current.length > 0) {
@@ -283,7 +312,6 @@ useEffect(()=>{
       }
       return 0;
     }
-    console.log(DomActivePage, "DomActivePage");
     const applyRotation = () => {
       // pageRefs.current.forEach((pageContainer) => {
       //   if (pageContainer) {
@@ -311,21 +339,21 @@ useEffect(()=>{
       //   }
       // });
 
-      pageRefs.current.forEach((pageContainer) => {
-        if (pageContainer.getAttribute("data-page-number") == currentPage) {
-          let prevHeight = pageContainer.offsetHeight;
-          let prevWidth = pageContainer.offsetWidth;
+      // pageRefs.current.forEach((pageContainer) => {
+      //   if (pageContainer.getAttribute("data-page-number") == currentPage) {
+      //     let prevHeight = pageContainer.offsetHeight;
+      //     let prevWidth = pageContainer.offsetWidth;
 
-          if (pageContainer && pageContainer.children.length > 0) {
-            const firstChild = pageContainer.children[0];
+      //     if (pageContainer && pageContainer.children.length > 0) {
+      //       const firstChild = pageContainer.children[0];
 
-            pageContainer.style.height = `${prevWidth}px`;
-            pageContainer.style.width = `${prevHeight}px`;
-            firstChild.style.backgroundColor = "lightblue";
-          }
-          pageContainer.style.transform = `rotate(${pageDetails[currentPage]}deg)`;
-        }
-      });
+      //       pageContainer.style.height = `${prevWidth}px`;
+      //       pageContainer.style.width = `${prevHeight}px`;
+      //       firstChild.style.backgroundColor = "lightblue";
+      //     }
+      //     pageContainer.style.transform = `rotate(${pageDetails[currentPage]}deg)`;
+      //   }
+      // });
     };
 
     applyRotation();
@@ -382,7 +410,7 @@ useEffect(()=>{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          position:'relative'
+          position: "relative",
         }}
       >
         {numPages ? null : <p>Loading document...</p>}
