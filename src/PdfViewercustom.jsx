@@ -43,19 +43,19 @@ const PdfViewer = () => {
   const renderPage = (page, pageNum, heightOfPage, widthOfPage) => {
     return new Promise(async (resolve, reject) => {
       try {
-        // const viewport = page.getViewport({ scale: 1 });
-        // const canvas = document.createElement("canvas");
-        // canvas.height = viewport.height;
-        // canvas.width = viewport.width;
-        // const context = canvas.getContext("2d");
+        const viewport = page.getViewport({ scale: 1 });
+        const canvas = document.createElement("canvas");
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        const context = canvas.getContext("2d");
 
-        // const renderContext = {
-        //   canvasContext: context,
-        //   viewport: viewport,
-        // };
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport,
+        };
 
         // Wait for the page to render
-        // await page.render(renderContext).promise;
+        page.render(renderContext).promise;
 
         const pageContainer = document.createElement("div");
         pageContainer.style.position = "relative";
@@ -65,9 +65,9 @@ const PdfViewer = () => {
         pageContainer.style.width = `${widthOfPage}px`;
         pageContainer.style.justifyContent = "center";
 
-        // canvas.style.display = "block";
+        canvas.style.display = "block";
 
-        // pageContainer.appendChild(canvas);
+        pageContainer.appendChild(canvas);
 
         const grandParent = document.createElement("div");
         grandParent.style.height = `${heightOfPage}px`;
@@ -82,14 +82,14 @@ const PdfViewer = () => {
 
         grandParent.appendChild(pageContainer);
 
-        // if (containerRef.current && !pageRefs.current[pageNum - 1]) {
-        //   pageRefs.current[pageNum - 1] = grandParent;
-        //   containerRef.current.appendChild(grandParent);
-        //   setCurrentLoadPage((prev) => ({
-        //     start: 0,
-        //     end: pageNum,
-        //   }));
-        // }
+        if (containerRef.current && !pageRefs.current[pageNum - 1]) {
+          pageRefs.current[pageNum - 1] = grandParent;
+          containerRef.current.appendChild(grandParent);
+          setCurrentLoadPage((prev) => ({
+            start: 0,
+            end: pageNum,
+          }));
+        }
 
         resolve({ success: true, pageNumber: pageNum, element: grandParent });
       } catch (error) {
@@ -99,15 +99,21 @@ const PdfViewer = () => {
   };
 
   const appendChildElement = (element, pageNum, wherToAppend) => {
-    if (containerRef.current && !pageRefs.current[pageNum - 1]) {
+    if (
+      containerRef.current &&
+      !Array.from(containerRef.current.childNodes).some(
+        (element) => element.getAttribute("data-page-number") == pageNum
+      )
+    ) {
+      console.log(containerRef.current.firstChild);
       if (wherToAppend === "START") {
-        pageRefs.current[pageNum - 1] = element;
+        pageRefs.current[pageNum] = element;
         containerRef.current.insertBefore(
           element,
           containerRef.current.firstChild
         );
       } else if (wherToAppend === "END") {
-        pageRefs.current[pageNum - 1] = element;
+        pageRefs.current[pageNum] = element;
         containerRef.current.appendChild(element);
       }
     }
@@ -164,6 +170,8 @@ const PdfViewer = () => {
   }, [topofTheParant]);
 
   useEffect(() => {
+    console.log("-------------------------");
+
     checkWheterRemovePage(currentPage);
   }, [currentPage]);
   const renderSinglePages = async (nexToLoad, whereToRremove) => {
@@ -189,9 +197,8 @@ const PdfViewer = () => {
 
         const element =
           containerRef.current.firstChild.getAttribute("data-page-number");
-        setTopofTheParant(
-          (prev) => containerRef.current.firstChild.offsetHeight + prev
-        );
+
+        setTopofTheParant((prev) => prev + pageDetails[element].height);
         if (parseInt(element) == parseInt(DomActivePage[0])) {
           containerRef.current.removeChild(containerRef.current.firstChild);
           // popFromsetDomActivePage()
@@ -203,17 +210,16 @@ const PdfViewer = () => {
 
         const element =
           containerRef.current.lastChild.getAttribute("data-page-number");
-        setTopofTheParant(
-          (prev) => containerRef.current.firstChild.offsetHeight + prev
-        );
+        setTopofTheParant((prev) => prev - pageDetails[nexToLoad].height);
+
         if (parseInt(element) == parseInt(DomActivePage[30])) {
-          containerRef.current.removeChild(containerRef.current.firstChild);
+          containerRef.current.removeChild(containerRef.current.lastChild);
+          setDomActivePage((prev) => {
+            const updatedArray = [response.pageNumber, ...prev];
+            updatedArray.pop();
+            return updatedArray;
+          });
         }
-        setDomActivePage((prev) => {
-          const updatedArray = [response.pageNumber, ...prev];
-          updatedArray.pop();
-          return updatedArray;
-        });
       }
     }
   };
@@ -230,17 +236,15 @@ const PdfViewer = () => {
     let nexToLoad = 0;
     let whereToRremove = null;
     if (currentPage >= 16) {
-      if (index > parseInt(DomActivePage.length/2)) {
+      if (index > parseInt(DomActivePage.length / 2)) {
         // remove from first and -unshift
         // add last element -push
         console.log("scroll in to down >>>>");
         nexToLoad = currentPage + 15;
         whereToRremove = "START";
-
-        setupIntersectionObserver();
       }
     }
-    if (index < 15 && currentPage > 15) {
+    if (index < 14) {
       //pop
       // add to first
       nexToLoad = currentPage - 14;
@@ -248,11 +252,10 @@ const PdfViewer = () => {
       console.log("<<<pop add to first");
     }
     if (nexToLoad) {
+      // setupIntersectionObserver();
       renderSinglePages(nexToLoad, whereToRremove);
     }
   };
-
-
 
   const setupIntersectionObserver = () => {
     const observer = new IntersectionObserver(
@@ -278,7 +281,7 @@ const PdfViewer = () => {
           setCurrentPage(visiblePageNumber);
         }
       },
-      { threshold: [0, 0.25, 0.5, 0.75, 1] }
+      { threshold: [0.25, 0.5, 0.75, 1] }
     );
 
     if (pageRefs.current.length > 0) {
@@ -292,83 +295,62 @@ const PdfViewer = () => {
     };
   };
 
-  useEffect(() => {
-    function getVerticalOverflow(element) {
-      const overflow = element.scrollHeight - element.clientHeight;
-      return overflow > 0 ? overflow : 0;
-    }
+  // function getVerticalOverflow(element) {
+  //   const overflow = element.scrollHeight - element.clientHeight;
+  //   return overflow > 0 ? overflow : 0;
+  // }
 
-    function getHorizontalOverflow(element) {
-      const overflow = element.scrollWidth - element.clientWidth;
-      return overflow > 0 ? overflow : 0;
-    }
+  // function getHorizontalOverflow(element) {
+  //   const overflow = element.scrollWidth - element.clientWidth;
+  //   return overflow > 0 ? overflow : 0;
+  // }
 
-    function checkOverflowByPageNumber(pageNumber) {
-      const element = document.querySelector(
-        `[data-page-number="${pageNumber}"]`
-      );
-      if (element) {
-        return getVerticalOverflow(element);
-      }
-      return 0;
-    }
-    const applyRotation = () => {
-      // pageRefs.current.forEach((pageContainer) => {
-      //   if (pageContainer) {
-      //     const canvas = pageContainer.querySelector("canvas");
-      //     if (canvas) {
-      //       const pageNumber = parseInt(
-      //         pageContainer.getAttribute("data-page-number"),
-      //         10
-      //       );
+  // function checkOverflowByPageNumber(pageNumber) {
+  //   const element = document.querySelector(
+  //     `[data-page-number="${pageNumber}"]`
+  //   );
+  //   if (element) {
+  //     return getVerticalOverflow(element);
+  //   }
+  //   return 0;
+  // }
+  const applyRotation = async(newRotation, newPageDetails, currentPage) => {
+    const rotatedivOfParent = Array.from(
+      containerRef.current.childNodes
+    ).filter((item) => item.getAttribute("data-page-number") == currentPage);
+   
 
-      //       const angle = pageDetails[pageNumber] || 0;
+    console.log(newPageDetails,"newPageDetails")
+    
+    rotatedivOfParent[0].firstChild.style.transform = `rotate(${newRotation}deg)`;
+    rotatedivOfParent[0].style.width = `${newPageDetails[currentPage].width}px`;
+    rotatedivOfParent[0].style.height = `${newPageDetails[currentPage].height}px`;
+  };
 
-      //       canvas.style.transform = `rotate(${angle}deg)`;
-      //       canvas.style.transformOrigin = "center";
 
-      //       let paddingHeight = checkOverflowByPageNumber(pageNumber);
-      //       const margin = angle % 180 === 0 ? "10px 0" : `${paddingHeight}px 0`;
-      //       console.log(margin);
-      //       pageContainer.style.padding = margin;
-      //       pageContainer.style.height =
-      //         angle % 180 === 0 ? `${canvas.height}px` : `${canvas.width + 60}px`;
-      //       pageContainer.style.width =
-      //         angle % 180 === 0 ? `${canvas.width}px` : `${canvas.height + 60}px`;
-      //     }
-      //   }
-      // });
-
-      // pageRefs.current.forEach((pageContainer) => {
-      //   if (pageContainer.getAttribute("data-page-number") == currentPage) {
-      //     let prevHeight = pageContainer.offsetHeight;
-      //     let prevWidth = pageContainer.offsetWidth;
-
-      //     if (pageContainer && pageContainer.children.length > 0) {
-      //       const firstChild = pageContainer.children[0];
-
-      //       pageContainer.style.height = `${prevWidth}px`;
-      //       pageContainer.style.width = `${prevHeight}px`;
-      //       firstChild.style.backgroundColor = "lightblue";
-      //     }
-      //     pageContainer.style.transform = `rotate(${pageDetails[currentPage]}deg)`;
-      //   }
-      // });
-    };
-
-    applyRotation();
-  }, [pageDetails]);
+  
 
   const rotatePage = (direction) => {
-    // setPageDetails((prevRotations) => {
-    //   const currentRotation = prevRotations[currentPage] || 0;
-    //   const newRotation = (currentRotation + direction * 90) % 360;
-    //   return {
-    //     ...prevRotations,
-    //     [currentPage]: newRotation,
-    //   };
-    // });
+    const currentRotation = pageDetails[currentPage]?.rotation || 0;
+    const newRotation = (currentRotation + direction * 90) % 360;
+
+    setPageDetails((prev) => {
+      const updatedPageDetails = prev ;
+      const currentPageDetails = updatedPageDetails[currentPage] || {};
+
+      updatedPageDetails[currentPage] = {
+        width :currentPageDetails.height,
+        height:currentPageDetails.width,
+        rotation: newRotation,
+      };
+
+      return updatedPageDetails;
+    });
+
+    applyRotation(newRotation, pageDetails, currentPage);
+
   };
+  console.log( "newRotation",  pageDetails);
 
   const knowThePossion = () => {
     if (containerRef.current) {
@@ -397,8 +379,6 @@ const PdfViewer = () => {
       // console.log('heightHistory:',heightHistory[0],"current page",screenPage);
     }
   };
-
-  const asyncLoadPages = (start, end, startPositionTop) => {};
 
   return (
     <div style={{ maxHeight: "100vh" }}>
