@@ -61,7 +61,7 @@ const PdfViewer = () => {
         const pageContainer = document.createElement("div");
         pageContainer.style.position = "relative";
         pageContainer.style.margin = "10px 0";
-        pageContainer.style.display = "flex";
+        // pageContainer.style.display = "flex";
         pageContainer.style.height = `${heightOfPage}px`;
         pageContainer.style.width = `${widthOfPage}px`;
         pageContainer.style.justifyContent = "center";
@@ -77,7 +77,7 @@ const PdfViewer = () => {
         grandParent.style.justifyContent = "center";
         grandParent.style.alignItems = "center";
         grandParent.style.backgroundColor = "#140fac52";
-        grandParent.style.marginBottom = "5px";
+        // grandParent.style.marginBottom = "5px";
 
         grandParent.setAttribute("data-page-number", pageNum);
 
@@ -106,7 +106,6 @@ const PdfViewer = () => {
         (element) => element.getAttribute("data-page-number") == pageNum
       )
     ) {
-      console.log(containerRef.current.firstChild);
       if (wherToAppend === "START") {
         pageRefs.current[pageNum] = element;
         containerRef.current.insertBefore(
@@ -224,13 +223,11 @@ const PdfViewer = () => {
       }
     }
   };
-  useEffect(() => {
-    console.log(DomActivePage, "DomActivePage");
-  }, DomActivePage);
+
 
   const checkWheterRemovePage = (currentPage) => {
     const index = DomActivePage.findIndex((element) => element === currentPage);
-    console.log("indexindex", index);
+    console.log("**************UVAIS*****************", index);
     if (index === -1) {
       return null;
     }
@@ -351,7 +348,6 @@ const PdfViewer = () => {
     applyRotation(newRotation, pageDetails, currentPage);
 
   };
-  console.log("newRotation", pageDetails);
 
   const knowThePossion = () => {
     if (containerRef.current) {
@@ -381,7 +377,6 @@ const PdfViewer = () => {
     }
   };
   const handleScroll = (e) => {
-    console.log("****&&***", e);
     if (scrollTrackerRef.current) {
       const rect = scrollTrackerRef.current.getBoundingClientRect();
       const containerRect = containerRef.current.getBoundingClientRect();
@@ -389,7 +384,7 @@ const PdfViewer = () => {
       let cumulativeHeight = 0;
       for (let i = 1; i <= numPages; i++) {
         cumulativeHeight += pageDetails[i].height;
-        if (offsetTop < cumulativeHeight) {
+        if (offsetTop < (cumulativeHeight - topofTheParant)) {
           setCurrentPage(i);
           break;
         }
