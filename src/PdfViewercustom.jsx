@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
 import * as pdfjs from "pdfjs-dist";
 import "pdfjs-dist/web/pdf_viewer.css";
+import { useEffect, useRef, useState } from "react";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -18,6 +18,7 @@ const PdfViewer = () => {
   const [currentLoadPage, setCurrentLoadPage] = useState({});
   const [DomActivePage, setDomActivePage] = useState([]);
   const [topofTheParant, setTopofTheParant] = useState(0);
+  const [zoom, SetZoom] = useState(1);
 
   const containerRef = useRef(null);
   const scrollTrackerRef = useRef(null);
@@ -41,6 +42,51 @@ const PdfViewer = () => {
 
     loadDocument();
   }, []);
+  const createpageAndAppendToDiv = async (pageNum, createpageAndAppendToDiv = 0) => {
+    try {
+      console.log(zoom)
+      const page = await pdf.getPage(parseInt(pageNum));
+      const viewport = page.getViewport({ scale: zoom, rotation: createpageAndAppendToDiv });
+      const canvas = document.createElement("canvas");
+      const rotation = 0
+
+      if (rotation === 90 || rotation === 270 || rotation === -90 || rotation === -270) {
+        canvas.width = viewport.height;
+        canvas.height = viewport.width;
+      } else {
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+      }
+
+      const context = canvas.getContext("2d");
+
+      // Translate and rotate the context
+      // context.translate(canvas.width / 2, canvas.height / 2);
+      // context.rotate((rotation * Math.PI) / 180);
+      // context.translate(-canvas.width / 2, -canvas.height / 2);
+
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport,
+      };
+
+      // Wait for the page to render
+      await page.render(renderContext).promise;
+      const containerElement = document.getElementById(pageNum);
+      if (containerElement) {
+        containerElement.appendChild(canvas);
+      } else {
+        console.warn(`Element with id ${pageNum} not found`);
+      }
+      return { success: true, pageNumber: pageNum, element: containerElement };
+    } catch (error) {
+      console.error("Error rendering page:", error);
+      throw error;
+    }
+  };
+
+
+
   const renderPage = (page, pageNum, heightOfPage, widthOfPage) => {
     return new Promise(async (resolve, reject) => {
       try {
@@ -60,19 +106,20 @@ const PdfViewer = () => {
 
         const pageContainer = document.createElement("div");
         pageContainer.style.position = "relative";
-        pageContainer.style.margin = "10px 0";
-        // pageContainer.style.display = "flex";
-        pageContainer.style.height = `${heightOfPage}px`;
-        pageContainer.style.width = `${widthOfPage}px`;
+        // pageContainer.style.margin = "10px 0";
+        pageContainer.style.display = "flex";
+        // pageContainer.style.height = `${heightOfPage * zoom}px`;
+        // pageContainer.style.width = `${widthOfPage * zoom}px`;
         pageContainer.style.justifyContent = "center";
+        pageContainer.id = pageNum
 
         canvas.style.display = "block";
 
         pageContainer.appendChild(canvas);
 
         const grandParent = document.createElement("div");
-        grandParent.style.height = `${heightOfPage}px`;
-        grandParent.style.width = `${widthOfPage}px`;
+        // grandParent.style.height = `${heightOfPage * zoom}px`;
+        // grandParent.style.width = `${widthOfPage * zoom}px`;
         grandParent.style.display = `flex`;
         grandParent.style.justifyContent = "center";
         grandParent.style.alignItems = "center";
@@ -312,40 +359,41 @@ const PdfViewer = () => {
   //   }
   //   return 0;
   // }
-  const applyRotation = async (newRotation, newPageDetails, currentPage) => {
-    const rotatedivOfParent = Array.from(
-      containerRef.current.childNodes
-    ).filter((item) => item.getAttribute("data-page-number") == currentPage);
+  const applyRotation = async (
+    newRotation,
+    prevWidth,
+    prevHeight,
+    currentPage
+  ) => {
+    // const rotatedivOfParent = Array.from(
+    //   containerRef.current.childNodes
+    // ).filter((item) => item.getAttribute("data-page-number") == currentPage);
 
+    // console.log(prevWidth, prevHeight, "newPageDetails w*h");
 
-    console.log(newPageDetails, "newPageDetails")
-
-    rotatedivOfParent[0].firstChild.style.transform = `rotate(${newRotation}deg)`;
-    rotatedivOfParent[0].style.width = `${newPageDetails[currentPage].width}px`;
-    rotatedivOfParent[0].style.height = `${newPageDetails[currentPage].height}px`;
+    // rotatedivOfParent[0].firstChild.style.transform = `rotate(${newRotation}deg)`;
+    // rotatedivOfParent[0].style.width = `${prevHeight }px`;
+    // rotatedivOfParent[0].style.height = `${prevWidth }px`;
   };
-
-
-
 
   const rotatePage = (direction) => {
     const currentRotation = pageDetails[currentPage]?.rotation || 0;
+    const prevWidth = pageDetails[currentPage]?.width * zoom;
+    const prevHeight = pageDetails[currentPage]?.height * zoom;
+
     const newRotation = (currentRotation + direction * 90) % 360;
+    const pageDetailsTemp = pageDetails;
+    pageDetailsTemp[currentPage] = {
+      width: pageDetailsTemp[currentPage].height,
+      height: pageDetailsTemp[currentPage].width,
+      rotation: newRotation,
+    };
 
-    setPageDetails((prev) => {
-      const updatedPageDetails = prev;
-      const currentPageDetails = updatedPageDetails[currentPage] || {};
+    setPageDetails(pageDetailsTemp);
+    const canvasParentDiv = document.getElementById(currentPage)
+    canvasParentDiv.querySelector('canvas').remove()
 
-      updatedPageDetails[currentPage] = {
-        width: currentPageDetails.height,
-        height: currentPageDetails.width,
-        rotation: newRotation,
-      };
-
-      return updatedPageDetails;
-    });
-
-    applyRotation(newRotation, pageDetails, currentPage);
+    createpageAndAppendToDiv(currentPage, newRotation)
 
   };
 
@@ -390,6 +438,65 @@ const PdfViewer = () => {
         }
       }
     }
+  }; const resetAllDomWidth = (zommPercentage) => {
+    // Access the div and change the width and height of the div according to the zoom
+
+    if (containerRef.current) {
+      const elements = containerRef.current.childNodes;
+      const canvases = containerRef.current.querySelectorAll("canvas");
+
+      canvases.forEach(canvas => {
+        canvas.remove();
+      });
+      elements.forEach(async (element) => {
+        const getPageNumber = parseInt(
+          element.getAttribute("data-page-number")
+        );
+        const rotationValues = [90, 270, -90, -270];
+        const rotationStatus = rotationValues.some(
+          (rotation) => rotation === pageDetails[getPageNumber]?.rotation
+        );
+
+
+        const newWidth = parseInt(pageDetails[getPageNumber]?.width * zommPercentage);
+        const newHeight = parseInt(pageDetails[getPageNumber]?.height * zommPercentage);
+
+        // element.style.width =`${newWidth}px`;
+        // element.style.height = `${newHeight}px`;
+
+        // element.style.border = "2px solid blue";
+        const firstChild = element.querySelector("div");
+
+        const pageNum = firstChild.getAttribute('id')
+
+        await createpageAndAppendToDiv(pageNum, pageDetails[pageNum]?.rotation);
+
+        if (firstChild) {
+          // firstChild.style.width = `${newWidth}px`;
+          // firstChild.style.height = `${newHeight}px`;
+        }
+
+      });
+    }
+  };
+
+  const handleZoomIn = () => {
+    const zoomTemp = zoom + 0.1 > 2 ? zoom : zoom + 0.1;
+
+    if (zoom + 0.1 < 2) {
+      SetZoom(zoomTemp);
+      // reset all the dom element width need to manage
+      resetAllDomWidth(zoomTemp);
+    }
+  };
+  const handleZoomOut = () => {
+    const zoomTemp = zoom - 0.1 < 0.2 ? zoom : zoom - 0.1;
+    console.log(zoomTemp);
+    if (zoom + 0.1 > 0.2) {
+      SetZoom(zoomTemp);
+      // reset all the dom element width need to manage
+      resetAllDomWidth(zoomTemp);
+    }
   };
   return (
     <div onScroll={handleScroll} style={{ maxHeight: "100vh", overflow: 'scroll' }}>
@@ -431,6 +538,14 @@ const PdfViewer = () => {
         <button onClick={() => rotatePage(-1)}>Rotate Left</button>
         <button onClick={() => rotatePage(1)}>Rotate Right</button>
         <button onClick={knowThePossion}> know the possi</button>
+        <button onClick={() => handleZoomIn()}>Zoomin</button>
+        <button
+          onClick={() => {
+            handleZoomOut();
+          }}
+        >
+          ZoomOut
+        </button>
 
         <div style={{ color: "white" }}>
           Page {currentPage} of {numPages}
