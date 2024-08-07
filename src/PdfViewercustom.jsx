@@ -20,6 +20,7 @@ const PdfViewer = () => {
   const [topofTheParant, setTopofTheParant] = useState(0);
 
   const containerRef = useRef(null);
+  const scrollTrackerRef = useRef(null);
   const pageRefs = useRef([]);
 
   const pushTosetDomActivePage = (item) => {
@@ -258,41 +259,41 @@ const PdfViewer = () => {
   };
 
   const setupIntersectionObserver = () => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        let maxIntersectionRatio = 0;
-        let visiblePageNumber = currentPage;
+    // const observer = new IntersectionObserver(
+    //   (entries) => {
+    //     let maxIntersectionRatio = 0;
+    //     let visiblePageNumber = currentPage;
 
-        entries.forEach((entry) => {
-          const pageNumber = parseInt(
-            entry.target.getAttribute("data-page-number"),
-            10
-          );
-          const visibleArea =
-            entry.intersectionRect.width * entry.intersectionRect.height;
+    //     entries.forEach((entry) => {
+    //       const pageNumber = parseInt(
+    //         entry.target.getAttribute("data-page-number"),
+    //         10
+    //       );
+    //       const visibleArea =
+    //         entry.intersectionRect.width * entry.intersectionRect.height;
 
-          if (visibleArea > maxIntersectionRatio) {
-            maxIntersectionRatio = visibleArea;
-            visiblePageNumber = pageNumber;
-          }
-        });
+    //       if (visibleArea > maxIntersectionRatio) {
+    //         maxIntersectionRatio = visibleArea;
+    //         visiblePageNumber = pageNumber;
+    //       }
+    //     });
 
-        if (visiblePageNumber !== currentPage) {
-          setCurrentPage(visiblePageNumber);
-        }
-      },
-      { threshold: [0.25, 0.5, 0.75, 1] }
-    );
+    //     if (visiblePageNumber !== currentPage) {
+    //       setCurrentPage(visiblePageNumber);
+    //     }
+    //   },
+    //   { threshold: [0.25, 0.5, 0.75, 1] }
+    // );
 
-    if (pageRefs.current.length > 0) {
-      pageRefs.current.forEach((pageContainer) => {
-        if (pageContainer) observer.observe(pageContainer);
-      });
-    }
+    // if (pageRefs.current.length > 0) {
+    //   pageRefs.current.forEach((pageContainer) => {
+    //     if (pageContainer) observer.observe(pageContainer);
+    //   });
+    // }
 
-    return () => {
-      observer.disconnect();
-    };
+    // return () => {
+    //   observer.disconnect();
+    // };
   };
 
   // function getVerticalOverflow(element) {
@@ -314,33 +315,33 @@ const PdfViewer = () => {
   //   }
   //   return 0;
   // }
-  const applyRotation = async(newRotation, newPageDetails, currentPage) => {
+  const applyRotation = async (newRotation, newPageDetails, currentPage) => {
     const rotatedivOfParent = Array.from(
       containerRef.current.childNodes
     ).filter((item) => item.getAttribute("data-page-number") == currentPage);
-   
 
-    console.log(newPageDetails,"newPageDetails")
-    
+
+    console.log(newPageDetails, "newPageDetails")
+
     rotatedivOfParent[0].firstChild.style.transform = `rotate(${newRotation}deg)`;
     rotatedivOfParent[0].style.width = `${newPageDetails[currentPage].width}px`;
     rotatedivOfParent[0].style.height = `${newPageDetails[currentPage].height}px`;
   };
 
 
-  
+
 
   const rotatePage = (direction) => {
     const currentRotation = pageDetails[currentPage]?.rotation || 0;
     const newRotation = (currentRotation + direction * 90) % 360;
 
     setPageDetails((prev) => {
-      const updatedPageDetails = prev ;
+      const updatedPageDetails = prev;
       const currentPageDetails = updatedPageDetails[currentPage] || {};
 
       updatedPageDetails[currentPage] = {
-        width :currentPageDetails.height,
-        height:currentPageDetails.width,
+        width: currentPageDetails.height,
+        height: currentPageDetails.width,
         rotation: newRotation,
       };
 
@@ -350,7 +351,7 @@ const PdfViewer = () => {
     applyRotation(newRotation, pageDetails, currentPage);
 
   };
-  console.log( "newRotation",  pageDetails);
+  console.log("newRotation", pageDetails);
 
   const knowThePossion = () => {
     if (containerRef.current) {
@@ -379,9 +380,34 @@ const PdfViewer = () => {
       // console.log('heightHistory:',heightHistory[0],"current page",screenPage);
     }
   };
-
+  const handleScroll = (e) => {
+    console.log("****&&***", e);
+    if (scrollTrackerRef.current) {
+      const rect = scrollTrackerRef.current.getBoundingClientRect();
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const offsetTop = Math.abs(containerRect.top - rect.top);
+      let cumulativeHeight = 0;
+      for (let i = 1; i <= numPages; i++) {
+        cumulativeHeight += pageDetails[i].height;
+        if (offsetTop < cumulativeHeight) {
+          setCurrentPage(i);
+          break;
+        }
+      }
+    }
+  };
   return (
-    <div style={{ maxHeight: "100vh" }}>
+    <div onScroll={handleScroll} style={{ maxHeight: "100vh", overflow: 'scroll' }}>
+      <div
+        ref={scrollTrackerRef}
+        style={{
+          position: "absolute",
+          top: 242,
+          height: "1px",
+          width: "100%",
+          zIndex: -1,
+        }}
+      ></div>
       <div
         ref={containerRef}
         style={{
