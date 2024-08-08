@@ -188,7 +188,7 @@ const PdfViewer = () => {
       }
       containerRef.current.style.height = `${heightOfAllPage}px`;
       let validResponses = [];
-      for (let pageNum = 1; pageNum <= 31; pageNum++) {
+      for (let pageNum = 1; pageNum <= 30; pageNum++) {
         const page = await pdf.getPage(pageNum);
         heightOfAllPage = page._pageInfo.view[3] + heightOfAllPage;
         let response = await renderPage(
@@ -259,7 +259,7 @@ const PdfViewer = () => {
           containerRef.current.lastChild.getAttribute("data-page-number");
         setTopofTheParant((prev) => prev - pageDetails[nexToLoad].height);
 
-        if (parseInt(element) == parseInt(DomActivePage[30])) {
+        if (parseInt(element) == parseInt(DomActivePage[29])) {
           containerRef.current.removeChild(containerRef.current.lastChild);
           setDomActivePage((prev) => {
             const updatedArray = [response.pageNumber, ...prev];
@@ -275,13 +275,14 @@ const PdfViewer = () => {
   const checkWheterRemovePage = (currentPage) => {
     const index = DomActivePage.findIndex((element) => element === currentPage);
     console.log("**************UVAIS*****************", index);
-    if (index === -1) {
+    if (index === -1 ) {
       return null;
     }
-    let nexToLoad = 0;
+    let nexToLoad = null;
     let whereToRremove = null;
-    if (currentPage >= 16) {
-      if (index > parseInt(DomActivePage.length / 2)) {
+    if (index >14){
+     
+      if (index > (parseInt(DomActivePage.length / 2) -1 )  ) {
         // remove from first and -unshift
         // add last element -push
         console.log("scroll in to down >>>>");
@@ -289,15 +290,18 @@ const PdfViewer = () => {
         whereToRremove = "START";
       }
     }
-    if (index < 14) {
+   else if (index < 14) {
       //pop
       // add to first
       nexToLoad = currentPage - 14;
       whereToRremove = "END";
+      console.log(nexToLoad,"currentPage",index)
       console.log("<<<pop add to first");
     }
-    if (nexToLoad) {
+    if (nexToLoad &&nexToLoad >0 && !(DomActivePage.some((index)=>{index === nexToLoad}))       ) {
       // setupIntersectionObserver();
+      console.log( nexToLoad," nexToLoad")
+      console.log(DomActivePage,DomActivePage)
       renderSinglePages(nexToLoad, whereToRremove);
     }
   };
@@ -400,14 +404,14 @@ const PdfViewer = () => {
   const knowThePossion = () => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      // console.log("top",rect.top);
+      console.log("top 1",rect.top);
       let top = Math.abs(rect.top);
       let pageHeight = 0;
       let heightHistory = [];
       let screenPage = null;
       for (let i = 1; i < numPages; i++) {
         pageHeight += parseFloat(pageDetails[i].height);
-        // console.log( top);
+        console.log( "top",top);
         heightHistory.push(pageDetails[i].height);
         if (heightHistory.length > 15) {
           heightHistory.shift();
@@ -421,9 +425,40 @@ const PdfViewer = () => {
         }
       }
       heightHistory;
-      // console.log('heightHistory:',heightHistory[0],"current page",screenPage);
+      console.log('heightHistory:',heightHistory,"current page",screenPage);
+
+      if(DomActivePage.findIndex(screenPage.pagenumber) ){}
+
+
+     // check the  current page is active on dom active state 
+    //  calculate the top and which page to load the 1st from top 
+
     }
   };
+
+  const goToPage = (pageNumber = 125) => {
+    if (pageNumber < 1 || pageNumber > pageDetails.length) {
+      console.error("Invalid page number");
+      return;
+    }
+  
+    let pageHeight = 0;
+    const heightHistory = [];
+    const maxHistoryLength = 15;
+  
+    for (let i = 1; i <= pageNumber; i++) {
+      const currentPageHeight = parseFloat(pageDetails[i].height * zoom);
+      pageHeight += currentPageHeight;
+  
+      if (heightHistory.length >= maxHistoryLength) {
+        heightHistory.shift();
+      }
+      heightHistory.push(pageHeight);
+    }
+  
+    console.log(heightHistory, "heightHistory", pageHeight);
+  };
+
   const handleScroll = (e) => {
     if (scrollTrackerRef.current) {
       const rect = scrollTrackerRef.current.getBoundingClientRect();
@@ -537,7 +572,7 @@ const PdfViewer = () => {
       >
         <button onClick={() => rotatePage(-1)}>Rotate Left</button>
         <button onClick={() => rotatePage(1)}>Rotate Right</button>
-        <button onClick={knowThePossion}> know the possi</button>
+        <button onClick={()=>goToPage(50)}> know the possi</button>
         <button onClick={() => handleZoomIn()}>Zoomin</button>
         <button
           onClick={() => {
