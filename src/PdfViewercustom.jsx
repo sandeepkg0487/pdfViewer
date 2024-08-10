@@ -197,7 +197,7 @@ const PdfViewer = () => {
         });
         heightOfAllPage = page._pageInfo.view[3] + heightOfAllPage;
       }
-      containerRef.current.style.height = `${heightOfAllPage}px`;
+      // containerRef.current.style.height = `${heightOfAllPage}px`;
       let validResponses = [];
       for (let pageNum = 1; pageNum <= 30; pageNum++) {
         const page = await pdf.getPage(pageNum);
@@ -216,6 +216,7 @@ const PdfViewer = () => {
       }
       setDomActivePage(validResponses);
       containerRef.current.style.height = `${heightOfAllPage}px`;
+
 
       setupIntersectionObserver();
     };
@@ -245,6 +246,7 @@ const PdfViewer = () => {
 
     if (response?.success === true) {
       if (whereToRremove === "START") {
+        const currentscrollTop =  document.getElementById('pdf-container').scrollTop 
         appendChildElement(response.element, response.pageNumber, "END");
         setDomActivePage((prev) => {
           const updatedArray = [...prev];
@@ -252,7 +254,7 @@ const PdfViewer = () => {
           updatedArray.push(response.pageNumber);
           return updatedArray;
         });
-
+        document.getElementById('pdf-container').scrollTop =`${currentscrollTop}px`
         const element =
           containerRef.current.firstChild.getAttribute("data-page-number");
 
@@ -516,7 +518,24 @@ const PdfViewer = () => {
       let cumulativeHeight = 0;
       for (let i = 1; i <= numPages; i++) {
         cumulativeHeight += pageDetails[i].height;
-        if (offsetTop < cumulativeHeight - topofTheParant) {
+        if (offsetTop < cumulativeHeight ) {
+          setCurrentPage(i);
+          break;
+        }
+      }
+    }
+  };
+  const handleScrollTemp = (e) => {
+    if (scrollTrackerRef.current) {
+
+   
+      const scrollTop = e.target.scrollTop;
+      console.log('scrolling:',scrollTop)
+            const offsetTop = Math.abs(scrollTop + 242);
+      let cumulativeHeight = 0;
+      for (let i = 1; i <= numPages; i++) {
+        cumulativeHeight += pageDetails[i].height;
+        if (offsetTop < cumulativeHeight ) {
           setCurrentPage(i);
           break;
         }
@@ -601,7 +620,7 @@ const PdfViewer = () => {
 
   return (
     <div
-      onScroll={handleScroll}
+      onScroll={handleScrollTemp}
       id="scrollDiv"
       style={{ maxHeight: "100vh", overflow: "scroll" }}
     >
@@ -613,8 +632,12 @@ const PdfViewer = () => {
           height: "1px",
           width: "100%",
           zIndex: -1,
+          backgroundColor:'black'
         }}
       ></div>
+     
+
+     
       <div
         ref={containerRef}
         style={{
@@ -624,10 +647,12 @@ const PdfViewer = () => {
           flexDirection: "column",
           alignItems: "center",
           position: "relative",
+          height:'100%',
         }}
       >
         {numPages ? null : <p>Loading document...</p>}
       </div>
+     
       <div
         style={{
           position: "fixed",
