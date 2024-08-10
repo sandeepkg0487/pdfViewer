@@ -7,8 +7,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
-const largePdf =
-  "https://xtract-s3-local.s3.us-east-1.amazonaws.com/dummy_pdf/output%20-%2020230223.215.2222.31220020M.pdf.pdf";
+const largePdf = "https://api105.ilovepdf.com/v1/download/chs6bf4hs4rxjyrpn45dxl7r2dml092vl15AbcAAqls968g65bxwz5c3tgmA3409lx04xz7r635d534q3x7c38jcy1b2ppt7vg1472rf3yc09cfft7k1p262b5jgcbq428m1gAk6hbbn5d09jdtAl5qp0dxrn2dzft2Ax1xkdh4k9375qj11"
+//  const largePdf ="https://xtract-s3-local.s3.us-east-1.amazonaws.com/dummy_pdf/output%20-%2020230223.215.2222.31220020M.pdf.pdf";
 
 const PdfViewer = () => {
   const [numPages, setNumPages] = useState(null);
@@ -22,8 +22,8 @@ const PdfViewer = () => {
 
   const containerRef = useRef(null);
   const scrollTrackerRef = useRef(null);
-  const pageRefs = useRef([]);
 
+  
   const pushTosetDomActivePage = (item) => {
     setDomActivePage((prevStack) => [...prevStack, item]);
   };
@@ -47,7 +47,6 @@ const PdfViewer = () => {
     createpageAndAppendToDiv = 0
   ) => {
     try {
-      console.log(zoom);
       const page = await pdf.getPage(parseInt(pageNum));
       const viewport = page.getViewport({
         scale: zoom,
@@ -83,22 +82,19 @@ const PdfViewer = () => {
 
       // Wait for the page to render
       await page.render(renderContext).promise;
-      const containerElement = document.getElementById(pageNum);
+      const containerElement = document.getElementById(String(pageNum));
       if (containerElement) {
         containerElement.appendChild(canvas);
       } else {
-        console.warn(`Element with id ${pageNum} not found`);
       }
       return { success: true, pageNumber: pageNum, element: containerElement };
     } catch (error) {
-      console.error("Error rendering page:", error);
       throw error;
     }
   };
 
   const renderPage = (page, pageNum) => {
     return new Promise(async (resolve, reject) => {
-      console.log("rendering...............", pageNum);
       try {
         const viewport = page.getViewport({ scale: 1 });
         const canvas = document.createElement("canvas");
@@ -140,8 +136,8 @@ const PdfViewer = () => {
 
         grandParent.appendChild(pageContainer);
 
-        if (containerRef.current && !pageRefs?.current[pageNum - 1]) {
-          pageRefs.current[pageNum - 1] = grandParent;
+        if (containerRef.current) {
+         
           containerRef.current.appendChild(grandParent);
           setCurrentLoadPage((prev) => ({
             start: 0,
@@ -151,7 +147,6 @@ const PdfViewer = () => {
 
         resolve({ success: true, pageNumber: pageNum, element: grandParent });
       } catch (error) {
-        console.log(error);
         reject(error);
       }
     });
@@ -165,14 +160,15 @@ const PdfViewer = () => {
       )
     ) {
       if (wherToAppend === "START") {
-        pageRefs.current[pageNum] = element;
+       
         containerRef.current.insertBefore(
           element,
           containerRef.current.firstChild
         );
       } else if (wherToAppend === "END") {
-        pageRefs.current[pageNum] = element;
+       
         containerRef.current.appendChild(element);
+        
       }
     }
   };
@@ -229,9 +225,13 @@ const PdfViewer = () => {
   }, [topofTheParant]);
 
   useEffect(() => {
-    console.log("-------------------------");
+    let delayfunction = setTimeout(() => {
+      checkWheterRemovePage(currentPage);
+    }, 300)
+    return () => {
+      clearTimeout(delayfunction)
 
-    checkWheterRemovePage(currentPage);
+    }
   }, [currentPage]);
   const renderSinglePages = async (nexToLoad, whereToRremove) => {
     if (!pdf) return;
@@ -246,7 +246,7 @@ const PdfViewer = () => {
 
     if (response?.success === true) {
       if (whereToRremove === "START") {
-        const currentscrollTop =  document.getElementById('pdf-container').scrollTop 
+        // const currentscrollTop =  document.getElementById('scrollDiv').scrollTop 
         appendChildElement(response.element, response.pageNumber, "END");
         setDomActivePage((prev) => {
           const updatedArray = [...prev];
@@ -254,13 +254,15 @@ const PdfViewer = () => {
           updatedArray.push(response.pageNumber);
           return updatedArray;
         });
-        document.getElementById('pdf-container').scrollTop =`${currentscrollTop}px`
+        // document.getElementById('scrollDiv').scrollTop =`${currentscrollTop}px`
         const element =
           containerRef.current.firstChild.getAttribute("data-page-number");
 
-        setTopofTheParant((prev) => prev + pageDetails[element].height);
-        if (parseInt(element) == parseInt(DomActivePage[0])) {
-          containerRef.current.removeChild(containerRef.current.firstChild);
+          if (parseInt(element) == parseInt(DomActivePage[0])) {
+            containerRef.current.removeChild(containerRef.current.firstChild);
+            
+            setTopofTheParant((prev) => prev + pageDetails[element].height);
+
           // popFromsetDomActivePage()
           // pushTosetDomActivePage(response.pageNumber)
         }
@@ -270,10 +272,12 @@ const PdfViewer = () => {
 
         const element =
           containerRef.current.lastChild.getAttribute("data-page-number");
-        setTopofTheParant((prev) => prev - pageDetails[nexToLoad].height);
+          
+          if (parseInt(element) == parseInt(DomActivePage[29])) {
 
-        if (parseInt(element) == parseInt(DomActivePage[29])) {
-          containerRef.current.removeChild(containerRef.current.lastChild);
+            containerRef.current.removeChild(containerRef.current.lastChild);
+
+            setTopofTheParant((prev) => prev - pageDetails[nexToLoad].height);
           setDomActivePage((prev) => {
             const updatedArray = [response.pageNumber, ...prev];
             updatedArray.pop();
@@ -289,7 +293,6 @@ const PdfViewer = () => {
 
   const checkWheterRemovePage = (currentPage) => {
     const index = DomActivePage.findIndex((element) => element === currentPage);
-    console.log("**************UVAIS*****************", index);
     if (index === -1) {
       return null;
     }
@@ -299,16 +302,15 @@ const PdfViewer = () => {
       if (index > parseInt(DomActivePage.length / 2) - 1) {
         // remove from first and -unshift
         // add last element -push
-        console.log("scroll in to down >>>>");
         nexToLoad = currentPage + 15;
+        console.log("scroll in to down >>>>remove page from start----  nexLOAD:", nexToLoad);
         whereToRremove = "START";
       }
-    } else if (index < 14) {
+    } else if (index < 13 &&currentPage>13) {
       //pop
       // add to first
-      nexToLoad = currentPage - 14;
+      nexToLoad = currentPage - 13;
       whereToRremove = "END";
-      console.log(nexToLoad, "currentPage", index);
       console.log("<<<pop add to first");
     }
     if (
@@ -319,8 +321,6 @@ const PdfViewer = () => {
       })
     ) {
       // setupIntersectionObserver();
-      console.log(nexToLoad, " nexToLoad");
-      console.log(DomActivePage, DomActivePage);
       renderSinglePages(nexToLoad, whereToRremove);
     }
   };
@@ -406,7 +406,7 @@ const PdfViewer = () => {
     };
 
     setPageDetails(pageDetailsTemp);
-    const canvasParentDiv = document.getElementById(currentPage);
+    const canvasParentDiv = document.getElementById(String(currentPage));
     canvasParentDiv.querySelector("canvas").remove();
 
     createpageAndAppendToDiv(currentPage, newRotation);
@@ -415,14 +415,12 @@ const PdfViewer = () => {
   const knowThePossion = () => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      console.log("top 1", rect.top);
       let top = Math.abs(rect.top);
       let pageHeight = 0;
       let heightHistory = [];
       let screenPage = null;
       for (let i = 1; i < numPages; i++) {
         pageHeight += parseFloat(pageDetails[i].height);
-        console.log("top", top);
         heightHistory.push(pageDetails[i].height);
         if (heightHistory.length > 15) {
           heightHistory.shift();
@@ -436,7 +434,6 @@ const PdfViewer = () => {
         }
       }
       heightHistory;
-      console.log("heightHistory:", heightHistory, "current page", screenPage);
 
       if (DomActivePage.findIndex(screenPage.pagenumber)) {
       }
@@ -460,7 +457,6 @@ const PdfViewer = () => {
   };
   const goToPage = (pageNumber = 125) => {
     if (pageNumber < 1 || pageNumber > pageDetails.length) {
-      console.error("Invalid page number");
       return;
     }
 
@@ -469,7 +465,7 @@ const PdfViewer = () => {
     const maxHistoryLength = 16;
 
     for (let i = 1; i <= pageNumber; i++) {
-      
+
       const currentPageHeight = parseFloat(pageDetails[i].height * zoom);
       pageHeight += currentPageHeight;
 
@@ -478,26 +474,23 @@ const PdfViewer = () => {
       }
       heightHistory.push(pageHeight);
     }
-    if(pageNumber>16)
-      {
-        setTopofTheParant(heightHistory[0]);
-      }
+    if (pageNumber > 16) {
+      setTopofTheParant(heightHistory[0]);
+    }
     // remove all dom element
     removeFirst30Children();
-    pageRefs.current = [];
+  
     const scrollDiv = document.getElementById("scrollDiv");
     scrollDiv.scrollTo({
       top: parseInt(heightHistory[14]),
       behavior: "smooth",
     });
-    console.log("pageNumber", pageNumber);
     const LoadPages = async (pageNumber, pdf) => {
       for (
         let pageNum = pageNumber - 15 > 0 ? pageNumber - 15 : 0;
         pageNum <= pageNumber + 15;
         pageNum++
       ) {
-        console.log("pageNum", pageNum);
         const page = await pdf.getPage(pageNum);
         renderPage(
           page,
@@ -518,7 +511,7 @@ const PdfViewer = () => {
       let cumulativeHeight = 0;
       for (let i = 1; i <= numPages; i++) {
         cumulativeHeight += pageDetails[i].height;
-        if (offsetTop < cumulativeHeight ) {
+        if (offsetTop < cumulativeHeight) {
           setCurrentPage(i);
           break;
         }
@@ -526,21 +519,21 @@ const PdfViewer = () => {
     }
   };
   const handleScrollTemp = (e) => {
-    if (scrollTrackerRef.current) {
-
    
-      const scrollTop = e.target.scrollTop;
-      console.log('scrolling:',scrollTop)
-            const offsetTop = Math.abs(scrollTop + 242);
-      let cumulativeHeight = 0;
-      for (let i = 1; i <= numPages; i++) {
-        cumulativeHeight += pageDetails[i].height;
-        if (offsetTop < cumulativeHeight ) {
-          setCurrentPage(i);
-          break;
+      if (scrollTrackerRef.current) {
+        const rect = scrollTrackerRef.current.getBoundingClientRect();
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const offsetTop = Math.abs(containerRect.top - rect.top);
+        let cumulativeHeight = 0;
+        for (let i = 1; i <= numPages; i++) {
+          cumulativeHeight += pageDetails[i].height;
+          if (offsetTop < cumulativeHeight ) {
+            console.log("offsetTop:",offsetTop,"cumulativeHeight:",cumulativeHeight)
+            setCurrentPage(i);
+            break;
+          }
         }
       }
-    }
   };
   const resetAllDomWidth = (zommPercentage) => {
     // Access the div and change the width and height of the div according to the zoom
@@ -597,7 +590,6 @@ const PdfViewer = () => {
   };
   const handleZoomOut = () => {
     const zoomTemp = zoom - 0.1 < 0.2 ? zoom : zoom - 0.1;
-    console.log(zoomTemp);
     if (zoom + 0.1 > 0.2) {
       SetZoom(zoomTemp);
       // reset all the dom element width need to manage
@@ -632,12 +624,12 @@ const PdfViewer = () => {
           height: "1px",
           width: "100%",
           zIndex: -1,
-          backgroundColor:'black'
+          backgroundColor: 'black'
         }}
       ></div>
-     
 
-     
+
+
       <div
         ref={containerRef}
         style={{
@@ -647,12 +639,12 @@ const PdfViewer = () => {
           flexDirection: "column",
           alignItems: "center",
           position: "relative",
-          height:'100%',
+          height: '100%',
         }}
       >
         {numPages ? null : <p>Loading document...</p>}
       </div>
-     
+
       <div
         style={{
           position: "fixed",
