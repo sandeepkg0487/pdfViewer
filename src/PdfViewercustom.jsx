@@ -23,13 +23,7 @@ const PdfViewer = () => {
   const containerRef = useRef(null);
   const scrollTrackerRef = useRef(null);
 
-  const pushTosetDomActivePage = (item) => {
-    setDomActivePage((prevStack) => [...prevStack, item]);
-  };
 
-  const popFromsetDomActivePage = () => {
-    setDomActivePage((prevStack) => prevStack.slice(0, -1));
-  };
 
   useEffect(() => {
     const loadDocument = async () => {
@@ -41,6 +35,9 @@ const PdfViewer = () => {
 
     loadDocument();
   }, []);
+
+
+
   const createpageAndAppendToDiv = async (
     pageNum,
     createpageAndAppendToDiv = 0
@@ -69,11 +66,6 @@ const PdfViewer = () => {
 
       const context = canvas.getContext("2d");
 
-      // Translate and rotate the context
-      // context.translate(canvas.width / 2, canvas.height / 2);
-      // context.rotate((rotation * Math.PI) / 180);
-      // context.translate(-canvas.width / 2, -canvas.height / 2);
-
       const renderContext = {
         canvasContext: context,
         viewport: viewport,
@@ -92,6 +84,7 @@ const PdfViewer = () => {
     }
   };
 
+  //creating canvas elemetnt and return canvas
   const renderPage = (page, pageNum) => {
     return new Promise(async (resolve, reject) => {
       try {
@@ -135,13 +128,6 @@ const PdfViewer = () => {
 
         grandParent.appendChild(pageContainer);
 
-        // if (containerRef.current) {
-        //   containerRef.current.appendChild(grandParent);
-        //   setCurrentLoadPage((prev) => ({
-        //     start: 0,
-        //     end: pageNum,
-        //   }));
-        // }
 
         resolve({ success: true, pageNumber: pageNum, element: grandParent });
       } catch (error) {
@@ -150,6 +136,8 @@ const PdfViewer = () => {
     });
   };
 
+
+  // dom append canvas 
   const appendChildElement = (element, pageNum, wherToAppend) => {
     console.log("checkpoint 2")
     if (containerRef.current && !document.getElementById(String(pageNum))) {
@@ -176,6 +164,7 @@ const PdfViewer = () => {
 
   };
 
+  // useEffect for inital load calculate the width and load 30 element 1st
   useEffect(() => {
     const renderAllPages = async () => {
       if (!pdf) return;
@@ -196,7 +185,6 @@ const PdfViewer = () => {
         });
         heightOfAllPage = page._pageInfo.view[3] + heightOfAllPage;
       }
-      // containerRef.current.style.height = `${heightOfAllPage}px`;
       let validResponses = [];
       for (let pageNum = 1; pageNum <= 30; pageNum++) {
         const page = await pdf.getPage(pageNum);
@@ -222,26 +210,18 @@ const PdfViewer = () => {
     renderAllPages();
   }, [pdf, numPages]);
 
-  useEffect(() => {
-    containerRef.current.style.top = `${topofTheParant}px`;
-  }, [topofTheParant]);
-
+ 
 
   
   
+// use Effec for current page change 
 
   useEffect(() => {
-
-       
-     
-   
-
-
-
 
     let delayfunction = setTimeout(() => {
       const isPresent = document.getElementById(String(currentPage));
       if (!isPresent) {
+        console.log('draging ......')
                goToPage(currentPage);
       } else {
         checkWheterRemovePage(currentPage);
@@ -255,6 +235,8 @@ const PdfViewer = () => {
 
 
 
+  // give a page number and  where to append function
+ 
   const renderSinglePages = async (nexToLoad, whereToRremove) => {
     if (!pdf) return;
     if (!document.getElementById(String(nexToLoad))) {
@@ -268,7 +250,6 @@ const PdfViewer = () => {
 
       if (response?.success === true) {
         if (whereToRremove === "START") {
-          // const currentscrollTop =  document.getElementById('scrollDiv').scrollTop
           appendChildElement(response.element, response.pageNumber, "END");
           setDomActivePage((prev) => {
             const updatedArray = [...prev];
@@ -276,7 +257,6 @@ const PdfViewer = () => {
             updatedArray.push(response.pageNumber);
             return updatedArray;
           });
-          // document.getElementById('scrollDiv').scrollTop =`${currentscrollTop}px`
           const element =
             containerRef.current.firstChild.getAttribute("data-page-number");
 
@@ -286,10 +266,7 @@ const PdfViewer = () => {
             const topPosition =parseInt(pageDetails[parseInt(element)].height) +prevTopPosition
 
             containerRef.current.style.top = `${topPosition}px`;
-            // setTopofTheParant((prev) => prev + pageDetails[element].height);
-
-            // popFromsetDomActivePage()
-            // pushTosetDomActivePage(response.pageNumber)
+           
             containerRef.current.removeChild(containerRef.current.firstChild);
           }
         }
@@ -305,7 +282,6 @@ const PdfViewer = () => {
               
               containerRef.current.style.top = `${topPosition}px`;
               containerRef.current.removeChild(containerRef.current.lastChild);
-              // setTopofTheParant((prev) => prev - pageDetails[nexToLoad].height);
               setDomActivePage((prev) => {
                 const updatedArray = [response.pageNumber, ...prev];
                 updatedArray.pop();
@@ -317,11 +293,17 @@ const PdfViewer = () => {
       }
     }
   };
+
+
+
   useEffect(() => {
     console.log(DomActivePage, "DomActivePage");
   }, [DomActivePage]);
 
+
+
   const checkWheterRemovePage = (currentPage) => {
+
     const index = DomActivePage.findIndex((element) => element === currentPage);
     if (index === -1) {
       return null;
@@ -353,73 +335,7 @@ const PdfViewer = () => {
     }
   };
 
-  const setupIntersectionObserver = () => {
-    // const observer = new IntersectionObserver(
-    //   (entries) => {
-    //     let maxIntersectionRatio = 0;
-    //     let visiblePageNumber = currentPage;
-    //     entries.forEach((entry) => {
-    //       const pageNumber = parseInt(
-    //         entry.target.getAttribute("data-page-number"),
-    //         10
-    //       );
-    //       const visibleArea =
-    //         entry.intersectionRect.width * entry.intersectionRect.height;
-    //       if (visibleArea > maxIntersectionRatio) {
-    //         maxIntersectionRatio = visibleArea;
-    //         visiblePageNumber = pageNumber;
-    //       }
-    //     });
-    //     if (visiblePageNumber !== currentPage) {
-    //       setCurrentPage(visiblePageNumber);
-    //     }
-    //   },
-    //   { threshold: [0.25, 0.5, 0.75, 1] }
-    // );
-    // if (pageRefs.current.length > 0) {
-    //   pageRefs.current.forEach((pageContainer) => {
-    //     if (pageContainer) observer.observe(pageContainer);
-    //   });
-    // }
-    // return () => {
-    //   observer.disconnect();
-    // };
-  };
-
-  // function getVerticalOverflow(element) {
-  //   const overflow = element.scrollHeight - element.clientHeight;
-  //   return overflow > 0 ? overflow : 0;
-  // }
-
-  // function getHorizontalOverflow(element) {
-  //   const overflow = element.scrollWidth - element.clientWidth;
-  //   return overflow > 0 ? overflow : 0;
-  // }
-
-  // function checkOverflowByPageNumber(pageNumber) {
-  //   const element = document.querySelector(
-  //     `[data-page-number="${pageNumber}"]`
-  //   );
-  //   if (element) {
-  //     return getVerticalOverflow(element);
-  //   }
-  //   return 0;
-  // }
-  const applyRotation = async (
-    newRotation,
-    prevWidth,
-    prevHeight,
-    currentPage
-  ) => {
-    // const rotatedivOfParent = Array.from(
-    //   containerRef.current.childNodes
-    // ).filter((item) => item.getAttribute("data-page-number") == currentPage);
-    // console.log(prevWidth, prevHeight, "newPageDetails w*h");
-    // rotatedivOfParent[0].firstChild.style.transform = `rotate(${newRotation}deg)`;
-    // rotatedivOfParent[0].style.width = `${prevHeight }px`;
-    // rotatedivOfParent[0].style.height = `${prevWidth }px`;
-  };
-
+ 
   const rotatePage = (direction) => {
     const currentRotation = pageDetails[currentPage]?.rotation || 0;
     const prevWidth = pageDetails[currentPage]?.width * zoom;
@@ -440,36 +356,7 @@ const PdfViewer = () => {
     createpageAndAppendToDiv(currentPage, newRotation);
   };
 
-  const knowThePossion = () => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      let top = Math.abs(rect.top);
-      let pageHeight = 0;
-      let heightHistory = [];
-      let screenPage = null;
-      for (let i = 1; i < numPages; i++) {
-        pageHeight += parseFloat(pageDetails[i].height);
-        heightHistory.push(pageDetails[i].height);
-        if (heightHistory.length > 15) {
-          heightHistory.shift();
-        }
-        if (top < pageHeight) {
-          screenPage = {
-            page: pageDetails[i],
-            pagenumber: i,
-          };
-          break;
-        }
-      }
-      heightHistory;
 
-      if (DomActivePage.findIndex(screenPage.pagenumber)) {
-      }
-
-      // check the  current page is active on dom active state
-      //  calculate the top and which page to load the 1st from top
-    }
-  };
 
   const removeAllChildren = () => {
     if (containerRef && containerRef.current) {
@@ -479,6 +366,8 @@ const PdfViewer = () => {
       }
     }
   };
+
+
   const goToPage = (pageNumber = 125) => {
     try{
 
@@ -563,6 +452,7 @@ const PdfViewer = () => {
       }
     }
   };
+
   const handleScrollTemp = (e) => {
     if (scrollTrackerRef.current) {
      const scrollPosition = e.target.scrollTop;
@@ -577,6 +467,7 @@ const PdfViewer = () => {
       }
     }
   };
+  
   const resetAllDomWidth = (zommPercentage) => {
     // Access the div and change the width and height of the div according to the zoom
 
