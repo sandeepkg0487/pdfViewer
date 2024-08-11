@@ -19,6 +19,8 @@ const PdfViewer = () => {
   const [DomActivePage, setDomActivePage] = useState([]);
   const [topofTheParant, setTopofTheParant] = useState(0);
   const [zoom, SetZoom] = useState(1);
+const [heightOfAllPage,setHeightOfAllPage]= useState(0);
+
 
   const containerRef = useRef(null);
   const scrollTrackerRef = useRef(null);
@@ -139,28 +141,22 @@ const PdfViewer = () => {
 
   // dom append canvas 
   const appendChildElement = (element, pageNum, wherToAppend) => {
-    console.log("checkpoint 2")
     if (containerRef.current && !document.getElementById(String(pageNum))) {
-    console.log("checkpoint 2.1")
       try{
 
         if (wherToAppend === "START") {
-          console.log("checkpoint 3" , containerRef.current.firstChild)
           containerRef.current.insertBefore(
             element,
             containerRef.current.firstChild
           );
         } else if (wherToAppend === "END") {
-          console.log("checkpoint 4" , containerRef.current.firstChild)
           containerRef.current.appendChild(element);
         }
       }catch(err){
         console.log("checkpoint error:",err)
       }
-    console.log("checkpoint 5")
 
     }
-    console.log("checkpoint 6")
 
   };
 
@@ -203,7 +199,7 @@ const PdfViewer = () => {
       }
       setDomActivePage(validResponses);
       containerRef.current.style.height = `${heightOfAllPage}px`;
-
+      setHeightOfAllPage(heightOfAllPage)
       setupIntersectionObserver();
     };
 
@@ -221,12 +217,11 @@ const PdfViewer = () => {
     let delayfunction = setTimeout(() => {
       const isPresent = document.getElementById(String(currentPage));
       if (!isPresent) {
-        console.log('draging ......')
                goToPage(currentPage);
       } else {
         checkWheterRemovePage(currentPage);
       }
-    }, 300);
+    }, 500);
     return () => {
       clearTimeout(delayfunction);
      
@@ -264,6 +259,7 @@ const PdfViewer = () => {
             
             const prevTopPosition = containerRef.current.offsetTop;
             const topPosition =parseInt(pageDetails[parseInt(element)].height) +prevTopPosition
+            containerRef.current.style.height = `${heightOfAllPage -topPosition}px`
 
             containerRef.current.style.top = `${topPosition}px`;
            
@@ -271,7 +267,6 @@ const PdfViewer = () => {
           }
         }
         if (whereToRremove === "END") {
-          console.log("checkpoint 1");
           
           const element =
             containerRef.current.lastChild.getAttribute("data-page-number");
@@ -279,7 +274,9 @@ const PdfViewer = () => {
             if (parseInt(element) == parseInt(DomActivePage[29])) {
               const prevTopPosition = containerRef.current.offsetTop;
               const topPosition =prevTopPosition - parseInt(pageDetails[parseInt(element)].height) 
-              
+              document.getElementById('container1').offsetHeight
+              containerRef.current.style.height = `${heightOfAllPage + topPosition}px`
+              console.log("document.getElementById('container1').offsetHeight",document.getElementById('container1').offsetHeight)
               containerRef.current.style.top = `${topPosition}px`;
               containerRef.current.removeChild(containerRef.current.lastChild);
               setDomActivePage((prev) => {
@@ -368,7 +365,44 @@ const PdfViewer = () => {
   };
 
 
-  const goToPage = (pageNumber = 125) => {
+  const goToPage = async(pageNumber = 125) => {
+    const LoadPages = async (pageNumber, pdf) => {
+      let fillSetActivePage = [];
+      let startPage = 0;
+      let endPage = 0;
+    
+      if (pageNumber < 16) {
+        // Load the first 30 pages
+        startPage = 1;
+        endPage = Math.min(30, numPages);
+      } else if (pageNumber > numPages - 15) {
+        // Load the last 30 pages
+        startPage = Math.max(1, numPages - 29);
+        endPage = numPages;
+      } else {
+        // Load pages around the current page
+        startPage = pageNumber - 14;
+        endPage = pageNumber + 15;
+      }
+    
+      for (let pageNum = startPage; pageNum <= endPage; pageNum++) {
+        if (!document.getElementById(String(pageNum))) {
+          const page = await pdf.getPage(pageNum);
+          const response = await renderPage(
+            page,
+            pageNum,
+            page._pageInfo.view[3],
+            page._pageInfo.view[2]
+          );
+          if (response?.success === true) {
+            appendChildElement(response.element, response.pageNumber, "END");
+            fillSetActivePage.push(pageNum);
+          }
+        }
+      }
+      setDomActivePage(fillSetActivePage);
+    };
+    
     try{
 
     
@@ -389,48 +423,22 @@ const PdfViewer = () => {
       }
       heightHistory.push(pageHeight);
     }
-    if (pageNumber > 16) {
-      
-
-      containerRef.current.style.top = `${parseInt(heightHistory[0])}px`;
-      // setTopofTheParant(heightHistory[0]);
-    }
+    console.log("parseInt( document.getElementById('container1').offsetHeight",parseInt( document.getElementById('container1').offsetHeight))
+    containerRef.current.style.height = `${heightOfAllPage - parseInt(heightHistory[0])}px`
+    containerRef.current.style.top = `${parseInt(heightHistory[0])}px`;
+       removeAllChildren();
     // remove all dom element
-    removeAllChildren();
+    const fillSetActivePage = await LoadPages(pageNumber, pdf);
     const scrollDiv = document.getElementById("scrollDiv");
     scrollDiv.scrollTo({
       top: parseInt(heightHistory[14]),
       behavior: "smooth",
     });
 
-    const LoadPages = async (pageNumber, pdf) => {
-      console.log('0101010011111')
-      let fillSetActivePage = [];
-      for (
-        let pageNum = pageNumber - 14 > 0 ? pageNumber - 14 : 0;
-        pageNum <= pageNumber + 15;
-        pageNum++
-      ) {
-        if (!document.getElementById(String(pageNum))) {
-          const page = await pdf.getPage(pageNum);
-          const response = await renderPage(
-            page,
-            pageNum,
-            page._pageInfo.view[3],
-            page._pageInfo.view[2]
-          );
-          if (response?.success === true) {
-            console.log('chsshshshshsh');
-            
-            fillSetActivePage.push(pageNum);
-          appendChildElement(response.element, response.pageNumber, "END");
-        }
-        }
-      }
-      console.log('fillSetActivePage',fillSetActivePage)
-      setDomActivePage(fillSetActivePage);
-    };
-    LoadPages(pageNumber, pdf);
+    if (pageNumber > 16) {
+      // setTopofTheParant(heightHistory[0]);
+    }
+   
   }catch(err){
     console.log(err)
   }
@@ -443,9 +451,10 @@ const PdfViewer = () => {
       const containerRect = containerRef.current.getBoundingClientRect();
       const offsetTop = Math.abs(containerRect.top - rect.top);
       let cumulativeHeight = 0;
+     const containerTop =  document.getElementById('scrollDiv').offsetTop
       for (let i = 1; i <= numPages; i++) {
         cumulativeHeight += pageDetails[i].height;
-        if (offsetTop < cumulativeHeight) {
+        if (offsetTop < cumulativeHeight - containerTop) {
           setCurrentPage(i);
           break;
         }
@@ -563,6 +572,7 @@ const PdfViewer = () => {
 
       <div
         ref={containerRef}
+        id = 'container1'
         style={{
           width: "100vw",
           overflowY: "scroll",
