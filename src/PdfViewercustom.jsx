@@ -1,5 +1,6 @@
 import * as pdfjs from "pdfjs-dist";
 import "pdfjs-dist/web/pdf_viewer.css";
+import { useCallback } from "react";
 import { useEffect, useRef, useState } from "react";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -7,8 +8,9 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
-// const largePdf =  "https://api50.ilovepdf.com/v1/download/lrz1d90jr8wrq7c1j5w3ncyc8fh65v0mshwn1ldrwkcjz8dg4z3nxdkvtsdsn5nnwlrt5sd64wwndmbhvmsvg4jffzb320jbb2tvgxxmvdfdlxcg2Axg1q7khm5kjv15c7cyzp46s4nmAz3b1vt9lcj9g322rv8fbtpfnfb5x1rzg57wkq9q";
- const largePdf ="https://xtract-s3-local.s3.us-east-1.amazonaws.com/dummy_pdf/output%20-%2020230223.215.2222.31220020M.pdf.pdf";
+// const largePdf =  "https://api48.ilovepdf.com/v1/download/rnqdbk2lc2r6775wn0pf8vh89mllgj8yw33jgvdgbg6dbky2nh60nyrkjj8dj99jh1gf0rwb95jjgqd2kkzgnjzn4s8h9265wtzdfvglpp4y5nf5xs5f79lwyykbv2xp58z1kfh1wwp2rsybz1bqfbj7gyvvlykkglzsxAr6mqAxp639n2b1";
+const largePdf =
+  "https://xtract-s3-local.s3.us-east-1.amazonaws.com/dummy_pdf/output%20-%2020230223.215.2222.31220020M.pdf.pdf";
 
 const PdfViewer = () => {
   const [numPages, setNumPages] = useState(null);
@@ -19,13 +21,10 @@ const PdfViewer = () => {
   const [DomActivePage, setDomActivePage] = useState([]);
   const [topofTheParant, setTopofTheParant] = useState(0);
   const [zoom, SetZoom] = useState(1);
-const [heightOfAllPage,setHeightOfAllPage]= useState(0);
-
+  const [heightOfAllPage, setHeightOfAllPage] = useState(0);
 
   const containerRef = useRef(null);
   const scrollTrackerRef = useRef(null);
-
-
 
   useEffect(() => {
     const loadDocument = async () => {
@@ -37,8 +36,6 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
 
     loadDocument();
   }, []);
-
-
 
   const createpageAndAppendToDiv = async (
     pageNum,
@@ -80,7 +77,7 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
         containerElement.appendChild(canvas);
       } else {
       }
-      return { success: true, pageNumber: pageNum, element: containerElement };
+      return { success: true, pageNumber: pageNum, element: canvas };
     } catch (error) {
       throw error;
     }
@@ -90,20 +87,11 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
   const renderPage = (page, pageNum) => {
     return new Promise(async (resolve, reject) => {
       try {
-        const viewport = page.getViewport({ scale: 1 });
-        const canvas = document.createElement("canvas");
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        const context = canvas.getContext("2d");
-
-        const renderContext = {
-          canvasContext: context,
-          viewport: viewport,
-        };
-
-        // Wait for the page to render
-        page.render(renderContext).promise;
-
+        const element = await createpageAndAppendToDiv(
+          pageNum,
+          pageDetails[pageNum]?.rotation || 0
+        );
+        const canvas = element.element;
         const pageContainer = document.createElement("div");
         pageContainer.style.position = "relative";
         // pageContainer.style.margin = "10px 0";
@@ -130,7 +118,6 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
 
         grandParent.appendChild(pageContainer);
 
-
         resolve({ success: true, pageNumber: pageNum, element: grandParent });
       } catch (error) {
         reject(error);
@@ -138,12 +125,10 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
     });
   };
 
-
-  // dom append canvas 
+  // dom append canvas
   const appendChildElement = (element, pageNum, wherToAppend) => {
     if (containerRef.current && !document.getElementById(String(pageNum))) {
-      try{
-
+      try {
         if (wherToAppend === "START") {
           containerRef.current.insertBefore(
             element,
@@ -152,12 +137,10 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
         } else if (wherToAppend === "END") {
           containerRef.current.appendChild(element);
         }
-      }catch(err){
-        console.log("checkpoint error:",err)
+      } catch (err) {
+        console.log("checkpoint error:", err);
       }
-
     }
-
   };
 
   // useEffect for inital load calculate the width and load 30 element 1st
@@ -198,40 +181,31 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
         }
       }
       setDomActivePage(validResponses);
-      containerRef.current.style.height = `${heightOfAllPage}px`;
-      setHeightOfAllPage(heightOfAllPage)
-      setupIntersectionObserver();
+      containerRef.current.style.height = `${heightOfAllPage * zoom}px`;
+      setHeightOfAllPage(heightOfAllPage * zoom);
     };
 
     renderAllPages();
   }, [pdf, numPages]);
 
- 
-
-  
-  
-// use Effec for current page change 
+  // use Effec for current page change
 
   useEffect(() => {
-
     let delayfunction = setTimeout(() => {
       const isPresent = document.getElementById(String(currentPage));
       if (!isPresent) {
-               goToPage(currentPage);
+        goToPage(currentPage);
       } else {
         checkWheterRemovePage(currentPage);
       }
     }, 500);
     return () => {
       clearTimeout(delayfunction);
-     
     };
   }, [currentPage]);
 
-
-
   // give a page number and  where to append function
- 
+
   const renderSinglePages = async (nexToLoad, whereToRremove) => {
     if (!pdf) return;
     if (!document.getElementById(String(nexToLoad))) {
@@ -256,51 +230,79 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
             containerRef.current.firstChild.getAttribute("data-page-number");
 
           if (parseInt(element) == parseInt(DomActivePage[0])) {
-            
             const prevTopPosition = containerRef.current.offsetTop;
-            const topPosition =parseInt(pageDetails[parseInt(element)].height) +prevTopPosition
-            containerRef.current.style.height = `${heightOfAllPage -topPosition}px`
+            const topPosition =
+              parseInt(pageDetails[parseInt(element)].height) * zoom +
+              prevTopPosition;
+            containerRef.current.style.height = `${
+              heightOfAllPage * zoom - topPosition
+            }px`;
 
-            containerRef.current.style.top = `${topPosition}px`;
-           
+            if (response.pageNumber < 16) {
+              console.log("setting top 0...");
+              containerRef.current.style.height = `${heightOfAllPage * zoom}px`;
+              containerRef.current.style.top = `${0}px`;
+            }
+            // else if(pageNumber > numPages-16){
+            //   containerRef.current.style.height = `${heightOfAllPage-topPosition}px`;
+            //   containerRef.current.style.top = `${topPosition}px`;
+            // }
+            else {
+              containerRef.current.style.height = `${
+                heightOfAllPage * zoom - topPosition
+              }px`;
+              containerRef.current.style.top = `${topPosition}px`;
+            }
             containerRef.current.removeChild(containerRef.current.firstChild);
           }
         }
         if (whereToRremove === "END") {
-          
           const element =
             containerRef.current.lastChild.getAttribute("data-page-number");
 
-            if (parseInt(element) == parseInt(DomActivePage[29])) {
-              const prevTopPosition = containerRef.current.offsetTop;
-              const topPosition =prevTopPosition - parseInt(pageDetails[parseInt(element)].height) 
-              document.getElementById('container1').offsetHeight
-              containerRef.current.style.height = `${heightOfAllPage + topPosition}px`
-              console.log("document.getElementById('container1').offsetHeight",document.getElementById('container1').offsetHeight)
+          if (parseInt(element) == parseInt(DomActivePage[29])) {
+            const prevTopPosition = containerRef.current.offsetTop;
+            const topPosition =
+              prevTopPosition -
+              parseInt(pageDetails[parseInt(element)].height * zoom);
+            console.log(topPosition, "topPosition");
+            document.getElementById("container1").offsetHeight;
+            containerRef.current.style.height = `${
+              heightOfAllPage * zoom + topPosition
+            }px`;
+            console.log(
+              "document.getElementById('container1').offsetHeight",
+              document.getElementById("container1").offsetHeight
+            );
+
+            if (response.pageNumber == 1 || currentPage < 15) {
+              console.log("setting top 0...");
+              containerRef.current.style.height = `${heightOfAllPage * zoom}px`;
+              containerRef.current.style.top = `${0}px`;
+            } else {
+              containerRef.current.style.height = `${
+                heightOfAllPage * zoom - topPosition
+              }px`;
               containerRef.current.style.top = `${topPosition}px`;
-              containerRef.current.removeChild(containerRef.current.lastChild);
-              setDomActivePage((prev) => {
-                const updatedArray = [response.pageNumber, ...prev];
-                updatedArray.pop();
-                return updatedArray;
-              });
-              appendChildElement(response.element, response.pageNumber, "START");
+            }
+            containerRef.current.removeChild(containerRef.current.lastChild);
+            setDomActivePage((prev) => {
+              const updatedArray = [response.pageNumber, ...prev];
+              updatedArray.pop();
+              return updatedArray;
+            });
+            appendChildElement(response.element, response.pageNumber, "START");
           }
         }
       }
     }
   };
 
-
-
   useEffect(() => {
     console.log(DomActivePage, "DomActivePage");
   }, [DomActivePage]);
 
-
-
   const checkWheterRemovePage = (currentPage) => {
-
     const index = DomActivePage.findIndex((element) => element === currentPage);
     if (index === -1) {
       return null;
@@ -332,7 +334,6 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
     }
   };
 
- 
   const rotatePage = (direction) => {
     const currentRotation = pageDetails[currentPage]?.rotation || 0;
     const prevWidth = pageDetails[currentPage]?.width * zoom;
@@ -353,8 +354,6 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
     createpageAndAppendToDiv(currentPage, newRotation);
   };
 
-
-
   const removeAllChildren = () => {
     if (containerRef && containerRef.current) {
       const container = containerRef.current;
@@ -364,13 +363,12 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
     }
   };
 
-
-  const goToPage = async(pageNumber = 125) => {
+  const goToPage = async (pageNumber = 125) => {
     const LoadPages = async (pageNumber, pdf) => {
       let fillSetActivePage = [];
       let startPage = 0;
       let endPage = 0;
-    
+
       if (pageNumber < 16) {
         // Load the first 30 pages
         startPage = 1;
@@ -384,7 +382,7 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
         startPage = pageNumber - 14;
         endPage = pageNumber + 15;
       }
-    
+
       for (let pageNum = startPage; pageNum <= endPage; pageNum++) {
         if (!document.getElementById(String(pageNum))) {
           const page = await pdf.getPage(pageNum);
@@ -402,47 +400,69 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
       }
       setDomActivePage(fillSetActivePage);
     };
-    
-    try{
 
-    
-    if (pageNumber < 1 || pageNumber > pageDetails.length) {
-      return;
-    }
-
-    let pageHeight = 0;
-    const heightHistory = [];
-    const maxHistoryLength = 16;
-
-    for (let i = 1; i <= pageNumber; i++) {
-      const currentPageHeight = parseFloat(pageDetails[i].height * zoom);
-      pageHeight += currentPageHeight;
-
-      if (heightHistory.length >= maxHistoryLength) {
-        heightHistory.shift();
+    try {
+      if (pageNumber < 1 || pageNumber >= pageDetails.length) {
+        return;
       }
-      heightHistory.push(pageHeight);
-    }
-    console.log("parseInt( document.getElementById('container1').offsetHeight",parseInt( document.getElementById('container1').offsetHeight))
-    containerRef.current.style.height = `${heightOfAllPage - parseInt(heightHistory[0])}px`
-    containerRef.current.style.top = `${parseInt(heightHistory[0])}px`;
-       removeAllChildren();
-    // remove all dom element
-    const fillSetActivePage = await LoadPages(pageNumber, pdf);
-    const scrollDiv = document.getElementById("scrollDiv");
-    scrollDiv.scrollTo({
-      top: parseInt(heightHistory[14]),
-      behavior: "smooth",
-    });
 
-    if (pageNumber > 16) {
-      // setTopofTheParant(heightHistory[0]);
-    }
-   
-  }catch(err){
-    console.log(err)
-  }
+      let pageHeight = 0;
+      const heightHistory = [];
+      const maxHistoryLength = 30;
 
+      for (let i = 1; i <= pageNumber; i++) {
+        const currentPageHeight = parseFloat(pageDetails[i].height * zoom);
+        pageHeight += currentPageHeight;
+
+        if (heightHistory.length >= maxHistoryLength) {
+          heightHistory.shift();
+        }
+        heightHistory.push(pageHeight);
+      }
+      console.log(
+        "parseInt( document.getElementById('container1').offsetHeight",
+        parseInt(document.getElementById("container1").offsetHeight)
+      );
+      if (pageNumber < 16) {
+        console.log("setting top 0...");
+        containerRef.current.style.height = `${heightOfAllPage * zoom}px`;
+        containerRef.current.style.top = `${0}px`;
+      } else if (pageNumber > numPages - 16) {
+        console.log("setting end top :------------------", heightHistory[0]);
+        containerRef.current.style.height = `${
+          heightOfAllPage * zoom - heightHistory[0]
+        }px`;
+        containerRef.current.style.top = `${heightHistory[0]}px`;
+      } else {
+        console.log("setting top  some ...");
+        containerRef.current.style.height = `${
+          heightOfAllPage * zoom - parseInt(heightHistory[14])
+        }px`;
+        containerRef.current.style.top = `${parseInt(heightHistory[14])}px`;
+      }
+
+      removeAllChildren();
+      // remove all dom element
+
+      const fillSetActivePage = await LoadPages(pageNumber, pdf);
+      const scrollDiv = document.getElementById("scrollDiv");
+      let behavior = 'smooth'
+if(performScale){
+  behavior='auto'
+  setPreformScale(false)
+}
+      scrollDiv.scrollTo({
+        top: parseInt(heightHistory[28]),
+        behavior
+        // behavior: "smooth",
+      });
+
+      if (pageNumber > 16) {
+        // setTopofTheParant(heightHistory[0]);
+      }
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   const handleScroll = (e) => {
@@ -451,7 +471,7 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
       const containerRect = containerRef.current.getBoundingClientRect();
       const offsetTop = Math.abs(containerRect.top - rect.top);
       let cumulativeHeight = 0;
-     const containerTop =  document.getElementById('scrollDiv').offsetTop
+      const containerTop = document.getElementById("scrollDiv").offsetTop;
       for (let i = 1; i <= numPages; i++) {
         cumulativeHeight += pageDetails[i].height;
         if (offsetTop < cumulativeHeight - containerTop) {
@@ -463,20 +483,27 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
   };
 
   const handleScrollTemp = (e) => {
+    e.preventDefault();
     if (scrollTrackerRef.current) {
-     const scrollPosition = e.target.scrollTop;
-      const offsetTop = Math.abs(scrollPosition  + 242);
+      const scrollPosition = e.target.scrollTop;
+      const offsetTop = Math.abs(scrollPosition + 242 * zoom);
       let cumulativeHeight = 0;
       for (let i = 1; i <= numPages; i++) {
-        cumulativeHeight += pageDetails[i].height;
-        if (offsetTop < cumulativeHeight ) {
+        cumulativeHeight += pageDetails[i].height * zoom;
+        if (offsetTop < cumulativeHeight) {
+          console.log(
+            "dataaaaa handle scroll",
+            offsetTop,
+            ":::::",
+            cumulativeHeight
+          );
           setCurrentPage(i);
           break;
         }
       }
     }
   };
-  
+
   const resetAllDomWidth = (zommPercentage) => {
     // Access the div and change the width and height of the div according to the zoom
 
@@ -488,56 +515,60 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
         canvas.remove();
       });
       elements.forEach(async (element) => {
-        const getPageNumber = parseInt(
-          element.getAttribute("data-page-number")
-        );
-        const rotationValues = [90, 270, -90, -270];
-        const rotationStatus = rotationValues.some(
-          (rotation) => rotation === pageDetails[getPageNumber]?.rotation
-        );
-
-        const newWidth = parseInt(
-          pageDetails[getPageNumber]?.width * zommPercentage
-        );
-        const newHeight = parseInt(
-          pageDetails[getPageNumber]?.height * zommPercentage
-        );
-
-        // element.style.width =`${newWidth}px`;
-        // element.style.height = `${newHeight}px`;
-
-        // element.style.border = "2px solid blue";
         const firstChild = element.querySelector("div");
 
         const pageNum = firstChild.getAttribute("id");
 
         await createpageAndAppendToDiv(pageNum, pageDetails[pageNum]?.rotation);
-
-        if (firstChild) {
-          // firstChild.style.width = `${newWidth}px`;
-          // firstChild.style.height = `${newHeight}px`;
-        }
       });
+      
     }
   };
+  // const [prevPage , setPrevPage] = useState(0);
+  const [performScale,setPreformScale] =useState(false)
+  useEffect(() => {
+    resetAllDomWidth(zoom);
+    goToPage(currentPage)
+  }, [zoom]);
+
 
   const handleZoomIn = () => {
     const zoomTemp = zoom + 0.1 > 2 ? zoom : zoom + 0.1;
-
+    setPreformScale(true)
     if (zoom + 0.1 < 2) {
       SetZoom(zoomTemp);
       // reset all the dom element width need to manage
-      resetAllDomWidth(zoomTemp);
+      // resetAllDomWidth(zoomTemp);
     }
   };
   const handleZoomOut = () => {
     const zoomTemp = zoom - 0.1 < 0.2 ? zoom : zoom - 0.1;
     if (zoom + 0.1 > 0.2) {
+      // setPrevPage(currentPage);
       SetZoom(zoomTemp);
+      setPreformScale(true)
       // reset all the dom element width need to manage
-      resetAllDomWidth(zoomTemp);
+      // resetAllDomWidth(zoomTemp);
+      console.log("zoom", zoomTemp);
     }
   };
+  function useDebounce(func, delay) {
+    const timeoutRef = useRef(null);
+
+    return useCallback((...args) => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(() => {
+            func(...args);
+        }, delay);
+    }, [func, delay]);
+}
+
+  const debouncedHandleZoomOut = useDebounce(handleZoomOut, 200);
+  const debouncedHandleZoomIn = useDebounce(handleZoomIn, 200);
+
+  
   const [inputValue, setInputValue] = useState("");
   const handleChange = (event) => {
     setInputValue(event.target.value);
@@ -562,7 +593,7 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
         ref={scrollTrackerRef}
         style={{
           position: "absolute",
-          top: 242,
+          top: 242 * zoom,
           height: "1px",
           width: "100%",
           zIndex: -1,
@@ -572,7 +603,7 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
 
       <div
         ref={containerRef}
-        id = 'container1'
+        id="container1"
         style={{
           width: "100vw",
           overflowY: "scroll",
@@ -601,7 +632,7 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
         <button onClick={() => rotatePage(-1)}>Rotate Left</button>
         <button onClick={() => rotatePage(1)}>Rotate Right</button>
         <button onClick={() => goToPage(100)}> know the possi</button>
-        <button onClick={() => handleZoomIn()}>Zoomin</button>
+        <button onClick={() => debouncedHandleZoomIn()}>Zoomin</button>
         <input
           type="number"
           value={inputValue}
@@ -613,7 +644,7 @@ const [heightOfAllPage,setHeightOfAllPage]= useState(0);
 
         <button
           onClick={() => {
-            handleZoomOut();
+            debouncedHandleZoomOut();
           }}
         >
           ZoomOut
