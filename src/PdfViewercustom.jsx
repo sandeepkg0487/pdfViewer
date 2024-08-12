@@ -227,7 +227,7 @@ const PdfViewer = () => {
             return updatedArray;
           });
           const element =
-            containerRef.current.firstChild.getAttribute("data-page-number");
+            containerRef.current.firstChild?.getAttribute("data-page-number");
 
           if (parseInt(element) == parseInt(DomActivePage[0])) {
             const prevTopPosition = containerRef.current.offsetTop;
@@ -258,7 +258,7 @@ const PdfViewer = () => {
         }
         if (whereToRremove === "END") {
           const element =
-            containerRef.current.lastChild.getAttribute("data-page-number");
+            containerRef.current.lastChild?.getAttribute("data-page-number");
 
           if (parseInt(element) == parseInt(DomActivePage[29])) {
             const prevTopPosition = containerRef.current.offsetTop;
@@ -373,9 +373,9 @@ const PdfViewer = () => {
         // Load the first 30 pages
         startPage = 1;
         endPage = Math.min(30, numPages);
-      } else if (pageNumber > numPages - 15) {
+      } else if (pageNumber > numPages - 16) {
         // Load the last 30 pages
-        startPage = Math.max(1, numPages - 29);
+        startPage = Math.max(1, numPages - 30);
         endPage = numPages;
       } else {
         // Load pages around the current page
@@ -446,14 +446,14 @@ const PdfViewer = () => {
 
       const fillSetActivePage = await LoadPages(pageNumber, pdf);
       const scrollDiv = document.getElementById("scrollDiv");
-      let behavior = 'smooth'
-if(performScale){
-  behavior='auto'
-  setPreformScale(false)
-}
+      let behavior = "smooth";
+      if (performScale) {
+        behavior = "auto";
+        setPreformScale(false);
+      }
       scrollDiv.scrollTo({
         top: parseInt(heightHistory[28]),
-        behavior
+        behavior,
         // behavior: "smooth",
       });
 
@@ -491,12 +491,6 @@ if(performScale){
       for (let i = 1; i <= numPages; i++) {
         cumulativeHeight += pageDetails[i].height * zoom;
         if (offsetTop < cumulativeHeight) {
-          console.log(
-            "dataaaaa handle scroll",
-            offsetTop,
-            ":::::",
-            cumulativeHeight
-          );
           setCurrentPage(i);
           break;
         }
@@ -506,69 +500,83 @@ if(performScale){
 
   const resetAllDomWidth = (zommPercentage) => {
     // Access the div and change the width and height of the div according to the zoom
+    try {
+      if (containerRef.current) {
+        const elements = containerRef.current.childNodes;
+        const canvases = containerRef.current.querySelectorAll("canvas");
 
-    if (containerRef.current) {
-      const elements = containerRef.current.childNodes;
-      const canvases = containerRef.current.querySelectorAll("canvas");
+        canvases.forEach((canvas) => {
+          canvas.remove();
+        });
+        let cumulativeHeight = 0;
 
-      canvases.forEach((canvas) => {
-        canvas.remove();
-      });
-      elements.forEach(async (element) => {
-        const firstChild = element.querySelector("div");
+        for (let i = 1; i < prevPage; i++) {
+          cumulativeHeight += pageDetails[i].height*zoom;       
+        }
+        containerRef.current.style.height = `${(heightOfAllPage * zoom)-cumulativeHeight}px`;
+        containerRef.current.style.top = `${cumulativeHeight}px`;
 
-        const pageNum = firstChild.getAttribute("id");
 
-        await createpageAndAppendToDiv(pageNum, pageDetails[pageNum]?.rotation);
-      });
-      
+        elements.forEach(async (element) => {
+          const firstChild = element.querySelector("div");
+
+          const pageNum = firstChild?.getAttribute("id");
+
+          await createpageAndAppendToDiv(
+            pageNum,
+            pageDetails[pageNum]?.rotation
+          );
+        });
+      }
+    } catch (error) {
+      console.log("error::::", error);
     }
   };
-  // const [prevPage , setPrevPage] = useState(0);
-  const [performScale,setPreformScale] =useState(false)
+  const [prevPage, setPrevPage] = useState(0);
+  const [performScale, setPreformScale] = useState(false);
   useEffect(() => {
     resetAllDomWidth(zoom);
-    goToPage(currentPage)
-  }, [zoom]);
-
+    goToPage(prevPage);
+  }, [zoom, prevPage]);
 
   const handleZoomIn = () => {
     const zoomTemp = zoom + 0.1 > 2 ? zoom : zoom + 0.1;
-    setPreformScale(true)
+    setPreformScale(true);
     if (zoom + 0.1 < 2) {
+      setPrevPage(currentPage);
       SetZoom(zoomTemp);
-      // reset all the dom element width need to manage
-      // resetAllDomWidth(zoomTemp);
     }
   };
   const handleZoomOut = () => {
     const zoomTemp = zoom - 0.1 < 0.2 ? zoom : zoom - 0.1;
     if (zoom + 0.1 > 0.2) {
       // setPrevPage(currentPage);
+      setPrevPage(currentPage);
       SetZoom(zoomTemp);
-      setPreformScale(true)
-      // reset all the dom element width need to manage
-      // resetAllDomWidth(zoomTemp);
+      setPreformScale(true);
+
       console.log("zoom", zoomTemp);
     }
   };
   function useDebounce(func, delay) {
     const timeoutRef = useRef(null);
 
-    return useCallback((...args) => {
+    return useCallback(
+      (...args) => {
         if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
+          clearTimeout(timeoutRef.current);
         }
         timeoutRef.current = setTimeout(() => {
-            func(...args);
+          func(...args);
         }, delay);
-    }, [func, delay]);
-}
+      },
+      [func, delay]
+    );
+  }
 
-  const debouncedHandleZoomOut = useDebounce(handleZoomOut, 200);
-  const debouncedHandleZoomIn = useDebounce(handleZoomIn, 200);
+  const debouncedHandleZoomOut = useDebounce(handleZoomOut, 500);
+  const debouncedHandleZoomIn = useDebounce(handleZoomIn, 500);
 
-  
   const [inputValue, setInputValue] = useState("");
   const handleChange = (event) => {
     setInputValue(event.target.value);
