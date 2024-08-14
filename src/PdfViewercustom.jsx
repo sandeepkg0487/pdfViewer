@@ -4,8 +4,9 @@ import { useCallback } from "react";
 import { useEffect, useRef, useState } from "react";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
 
-// const largePdf ="https://api97.ilovepdf.com/v1/download/yv4Avpzwpstkn208tchlnAchqtxxssr10377b0jrbrh6AlxrAcly4zxwf8dps7vbgdc7lpAh8cdxj8jrwl93bnjt3gfnt507rn8hvh41vfp82x6xcnAd1x9smp6cvyx5jrdsbsbf9ksyx8dynhbxt07vw972wnkAmd0tfwrb59q7l3vbA2f1";
+// const largePdf = "https://api97.ilovepdf.com/v1/download/yv4Avpzwpstkn208tchlnAchqtxxssr10377b0jrbrh6AlxrAcly4zxwf8dps7vbgdc7lpAh8cdxj8jrwl93bnjt3gfnt507rn8hvh41vfp82x6xcnAd1x9smp6cvyx5jrdsbsbf9ksyx8dynhbxt07vw972wnkAmd0tfwrb59q7l3vbA2f1";
 const largePdf = "https://xtract-s3-local.s3.us-east-1.amazonaws.com/dummy_pdf/output%20-%2020230223.215.2222.31220020M.pdf.pdf";
 
 const PdfViewer = () => {
@@ -29,6 +30,8 @@ const PdfViewer = () => {
 	  }, []);
 	const containerRef = useRef(null);
 	const scrollTrackerRef = useRef(null);
+
+	const [ruler, setRuler] = useState({});
 
 	useEffect(() => {
 		const loadDocument = async () => {
@@ -122,7 +125,14 @@ const PdfViewer = () => {
 				if (wherToAppend === "START") {
 					containerRef.current.insertBefore(element, containerRef.current.firstChild);
 				} else if (wherToAppend === "END") {
-					containerRef.current.appendChild(element);
+					if (ruler?.page == pageNum) {
+						
+						const rulerDiv = createAbsoluteDiv(ruler.position *( zoom/ruler.zoom));
+						element.firstChild.appendChild(rulerDiv);
+						containerRef.current.appendChild(element);
+					} else {
+						containerRef.current.appendChild(element);
+					}
 				}
 			} catch (err) {
 				console.log("checkpoint error:", err);
@@ -561,6 +571,65 @@ const PdfViewer = () => {
 			}
 		}
 	};
+	function createAbsoluteDiv(bottom = 0) {
+		const newDiv = document.createElement("div");
+
+		newDiv.style.position = "absolute";
+		newDiv.style.bottom = `${-bottom}px`;
+		newDiv.style.backgroundColor = "red";
+		newDiv.style.width = "100%";
+		newDiv.style.height = "5px";
+		newDiv.style.zIndex = "1";
+		newDiv.id = "rulerDiv";
+
+		return newDiv;
+	}
+
+	const handleDoubleClick = (event) => {
+		const parentElement = document.getElementById("scrollDiv");
+		const ScrollDivFromDom = document.getElementById("rulerDiv");
+
+		if (ScrollDivFromDom) {
+			ScrollDivFromDom.remove();
+		}
+		if (parentElement) {
+			const scrollTopValue = parentElement.scrollTop;
+			const clickYViewport = event.clientY;
+			let cumulativeHeight = 0;
+			let clickedPage = 0;
+			for (let i = 1; i <= numPages; i++) {
+				cumulativeHeight += pageDetails[i].height * zoom;
+				if (cumulativeHeight > scrollTopValue + clickYViewport) {
+					clickedPage = i;
+					console.log("clicked on the div ", i, scrollTopValue + clickYViewport - cumulativeHeight);
+					break;
+				}
+			}
+			const bottom = scrollTopValue + clickYViewport - cumulativeHeight;
+			const ruler = createAbsoluteDiv(bottom);
+			setRuler({ page: clickedPage, position: bottom, zoom: zoom });
+			document.getElementById(String(clickedPage)).appendChild(ruler);
+			console.log(`The vertical scroll position is: ${scrollTopValue}px ${clickYViewport}`);
+		}
+	};
+
+	useEffect(() => {
+		const handleKeyDown = (event) => {
+			if (event.altKey && event.keyCode === 71) {
+				if (ruler?.page) {
+					goToPage(ruler?.page);
+				} else {
+					console.log("Element not found");
+				}
+			}
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [ruler]);
 
 	return (
 		<>
