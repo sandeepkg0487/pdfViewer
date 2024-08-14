@@ -708,6 +708,7 @@ const PdfViewer = () => {
 					}}>
 					<div
 						onScroll={handleScrollTemp}
+						onDoubleClick={handleDoubleClick}
 						id="scrollDiv"
 						style={{
 							maxHeight: "93vh",
