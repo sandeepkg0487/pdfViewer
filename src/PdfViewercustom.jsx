@@ -181,6 +181,69 @@ const PdfViewer = () => {
 		renderAllPages();
 	}, [pdf, numPages]);
 
+
+
+
+	const  appendToTheElement = async(position,pageNumber)=>{
+		if (!pdf) return;
+		// const page = await pdf.getPage(pageNumber);
+		const response = await renderPage("page", pageNumber)
+		if (response?.success === true) {
+			if (response?.success === true) {
+				const prevTopPosition = containerRef.current.offsetTop;
+				const topPosition = parseInt(pageDetails[parseInt(pageNumber)].height) * zoom + prevTopPosition;
+						
+				const element = containerRef.current.childNodes
+				console.log('element',element)
+				if(position === 'END' && element.length ===30){
+					containerRef.current.firstChild.remove()
+					containerRef.current.appendChild(response.element)
+					containerRef.current.style.height = `${heightOfAllPage * zoom - topPosition}px`;
+					containerRef.current.style.top = `${topPosition}px`;
+					setDomActivePage((prev) => {
+						const updatedArray = [ ...prev,response.pageNumber];
+						updatedArray.shift();
+						return updatedArray;
+					});
+							
+				}
+				else if(position === 'START' && element.length ===30){
+					
+				}
+				alert('element ...')
+			}
+		}
+	} 
+
+
+	const loadMissingPages  = (nextLoad )=>{
+		if(currentPage>nextLoad){   // add element to first
+			const domElement = 	document.getElementById(String(nextLoad))
+			if(domElement && nextLoad >0){
+				loadMissingPages(nextLoad+1)
+			}else{
+				loadMissingPages(nextLoad+1)
+				console.log("added element nextLoad  :",nextLoad)
+				appendToTheElement("START",nextLoad)
+			}
+
+		}else if(currentPage<nextLoad){
+			const domElement = 	document.getElementById(String(nextLoad))
+			if(domElement ){
+				loadMissingPages(nextLoad-1)
+			}
+			else{
+				loadMissingPages(nextLoad-1)
+				console.log("added element nextLoad  :",nextLoad)	
+				appendToTheElement("END",nextLoad)
+			}
+		}
+
+		return
+
+		
+	}
+
 	// use Effec for current page change
 
 	useEffect(() => {
@@ -297,6 +360,7 @@ const PdfViewer = () => {
 			console.log("nexToLoad", nexToLoad, "index", index);
 		}
 		if (nexToLoad && nexToLoad > 0 && !document.getElementById(String(nexToLoad))) {
+			loadMissingPages(nexToLoad)
 			renderSinglePages(nexToLoad, whereToRremove);
 		}
 	};
@@ -617,7 +681,7 @@ const PdfViewer = () => {
 		const handleKeyDown = (event) => {
 			if (event.altKey && event.keyCode === 71) {
 				if (ruler?.page) {
-					goToPage(ruler?.page);
+					setCurrentPage(ruler?.page)
 				} else {
 					console.log("Element not found");
 				}
