@@ -3,15 +3,10 @@ import "pdfjs-dist/web/pdf_viewer.css";
 import { useCallback } from "react";
 import { useEffect, useRef, useState } from "react";
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+// pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
 pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
 
-const largePdf = "https://api63.ilovepdf.com/v1/download/dhcxq96fb6h94vs37wmzl3433A5fky0tlj91A26k0hl864fscdnf6hxvg28s1c49xs6gbynhyr9n0qsAfyk0r4dfv7d0yflb314pq0141f3snj6j49h0xlqzy8bA4zwrbmtncyj0b279hqttpkntd03yvpmscy8p95v976Ahsvv7lpqzpw81	";
-// const largePdf = "https://xtract-s3-local.s3.us-east-1.amazonaws.com/dummy_pdf/output%20-%2020230223.215.2222.31220020M.pdf.pdf";
-
-const PdfViewer = ({ loader, setLoader, currentPage, setCurrentPage }) => {
-	const [numPages, setNumPages] = useState(null);
-	const [pdf, setPdf] = useState(null);
+const PdfViewer = ({ loader, setLoader, currentPage, setCurrentPage, numPages, pdf }) => {
 	// const [currentPage, setCurrentPage] = useState(1);
 	const [pageDetails, setPageDetails] = useState([]);
 	const [currentLoadPage, setCurrentLoadPage] = useState({});
@@ -32,17 +27,6 @@ const PdfViewer = ({ loader, setLoader, currentPage, setCurrentPage }) => {
 	const scrollTrackerRef = useRef(null);
 
 	const [ruler, setRuler] = useState({});
-
-	useEffect(() => {
-		const loadDocument = async () => {
-			const loadingTask = pdfjs.getDocument(largePdf);
-			const loadedPdf = await loadingTask.promise;
-			setPdf(loadedPdf);
-			setNumPages(loadedPdf.numPages);
-		};
-
-		loadDocument();
-	}, []);
 
 	const createpageAndAppendToDiv = async (pageNum, createpageAndAppendToDiv = 0) => {
 		try {
@@ -562,14 +546,25 @@ const PdfViewer = ({ loader, setLoader, currentPage, setCurrentPage }) => {
 		setInputValue(currentPage);
 	}, [currentPage]);
 	const handleChange = (event) => {
-		setInputValue(event.target.value);
+		const { value } = event.target;
+		if (value === '' || /^[0-9]*$/.test(value)) {
+			setInputValue(value);
+		  }
+			
+		
 	};
 	const handleKeyDown = (event) => {
 		if (event.key === "Enter") {
 			event.preventDefault();
 			const newPageNumber = Number(inputValue);
 			if (!isNaN(newPageNumber)) {
-				goToPage(newPageNumber);
+				const rebasePage = newPageNumber > numPages ? numPages : newPageNumber <= 0 ?  1 :newPageNumber;
+				console.log(rebasePage);
+				
+				setInputValue(rebasePage)
+				if (currentPage != rebasePage) {
+					goToPage(rebasePage);
+				}
 			}
 		}
 	};
@@ -651,18 +646,18 @@ const PdfViewer = ({ loader, setLoader, currentPage, setCurrentPage }) => {
 					}}>
 					<div className="d-flex gap-1">
 						<div>
-							<i onClick={() => rotatePage(-1)} class="bi bi-arrow-counterclockwise" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Rotate Left"></i>
+							<i onClick={() => rotatePage(-1)} className="bi bi-arrow-counterclockwise" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Rotate Left"></i>
 						</div>
 						<div>
-							<i onClick={() => rotatePage(1)} class="bi bi-arrow-clockwise" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Rotate Right"></i>
+							<i onClick={() => rotatePage(1)} className="bi bi-arrow-clockwise" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Rotate Right"></i>
 						</div>
 					</div>
 					<div className="d-flex gap-1">
 						<div>
-							<i onClick={() => goToPage(1)} class="bi bi-caret-up" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="First Page"></i>
+							<i onClick={() => goToPage(1)} className="bi bi-caret-up" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="First Page"></i>
 						</div>
 						<div>
-							<i onClick={() => goToPage(currentPage - 1 >= 0 ? currentPage - 1 : 1)} class="bi bi-chevron-up" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Previous Page"></i>
+							<i onClick={() => goToPage(currentPage - 1 >= 0 ? currentPage - 1 : 1)} className="bi bi-chevron-up" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Previous Page"></i>
 						</div>
 					</div>
 
@@ -673,9 +668,10 @@ const PdfViewer = ({ loader, setLoader, currentPage, setCurrentPage }) => {
 							onChange={handleChange}
 							onKeyDown={handleKeyDown}
 							placeholder="Enter a number"
-							className="border rounded  no-arrows px-2"
+							className="border-0 rounded no-arrows px-2"
 							style={{
 								width: "70px",
+								outline: "none",
 							}}
 						/>
 						/ {numPages}
@@ -684,7 +680,7 @@ const PdfViewer = ({ loader, setLoader, currentPage, setCurrentPage }) => {
 					<div className="d-flex gap-1">
 						<div>
 							<i
-								class="bi bi-chevron-down  "
+								className="bi bi-chevron-down  "
 								onClick={() => goToPage(currentPage + 1 < numPages ? currentPage + 1 : numPages)}
 								style={{ color: "white", cursor: "pointer" }}
 								data-bs-toggle="tooltip"
@@ -692,19 +688,19 @@ const PdfViewer = ({ loader, setLoader, currentPage, setCurrentPage }) => {
 								data-bs-title="Next Page"></i>
 						</div>
 						<div>
-							<i class="bi bi-caret-down" onClick={() => goToPage(numPages)} style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Last Page"></i>
+							<i className="bi bi-caret-down" onClick={() => goToPage(numPages)} style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Last Page"></i>
 						</div>
 					</div>
 
 					<div>
-						<i onClick={() => debouncedHandleZoomIn()} class="bi bi-zoom-in" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Zoom In "></i>
+						<i onClick={() => debouncedHandleZoomIn()} className="bi bi-zoom-in" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Zoom In "></i>
 					</div>
 					<div>
 						<i
 							onClick={() => {
 								debouncedHandleZoomOut();
 							}}
-							class="bi bi-zoom-out"
+							className="bi bi-zoom-out"
 							style={{ color: "white" }}
 							data-bs-toggle="tooltip"
 							data-bs-placement="top"
@@ -741,8 +737,8 @@ const PdfViewer = ({ loader, setLoader, currentPage, setCurrentPage }) => {
 							}}></div>
 						{loader && (
 							<div style={{ position: "absolute", top: "50%", left: " 50%", zIndex: "100", transform: "translate(-50%, -50%)" }}>
-								<div class="spinner-border " role="status" style={{ width: "3rem", height: "3rem", color: "#1ba2a8 " }}>
-									<span class="sr-only"></span>
+								<div className="spinner-border " role="status" style={{ width: "3rem", height: "3rem", color: "#1ba2a8 " }}>
+									<span className="sr-only"></span>
 								</div>
 							</div>
 						)}
