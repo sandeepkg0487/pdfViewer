@@ -6,10 +6,10 @@ import { useEffect, useRef, useState } from "react";
 pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
 pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
 
-// const largePdf = "https://api97.ilovepdf.com/v1/download/yv4Avpzwpstkn208tchlnAchqtxxssr10377b0jrbrh6AlxrAcly4zxwf8dps7vbgdc7lpAh8cdxj8jrwl93bnjt3gfnt507rn8hvh41vfp82x6xcnAd1x9smp6cvyx5jrdsbsbf9ksyx8dynhbxt07vw972wnkAmd0tfwrb59q7l3vbA2f1";
-const largePdf = "https://xtract-s3-local.s3.us-east-1.amazonaws.com/dummy_pdf/output%20-%2020230223.215.2222.31220020M.pdf.pdf";
+const largePdf = "https://api63.ilovepdf.com/v1/download/dhcxq96fb6h94vs37wmzl3433A5fky0tlj91A26k0hl864fscdnf6hxvg28s1c49xs6gbynhyr9n0qsAfyk0r4dfv7d0yflb314pq0141f3snj6j49h0xlqzy8bA4zwrbmtncyj0b279hqttpkntd03yvpmscy8p95v976Ahsvv7lpqzpw81	";
+// const largePdf = "https://xtract-s3-local.s3.us-east-1.amazonaws.com/dummy_pdf/output%20-%2020230223.215.2222.31220020M.pdf.pdf";
 
-const PdfViewer = ({loader,setLoader,currentPage,setCurrentPage}) => {
+const PdfViewer = ({ loader, setLoader, currentPage, setCurrentPage }) => {
 	const [numPages, setNumPages] = useState(null);
 	const [pdf, setPdf] = useState(null);
 	// const [currentPage, setCurrentPage] = useState(1);
@@ -25,9 +25,9 @@ const PdfViewer = ({loader,setLoader,currentPage,setCurrentPage}) => {
 		// Initialize all tooltips on this component
 		const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
 		const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-		  return new bootstrap.Tooltip(tooltipTriggerEl);
+			return new bootstrap.Tooltip(tooltipTriggerEl);
 		});
-	  }, []);
+	}, []);
 	const containerRef = useRef(null);
 	const scrollTrackerRef = useRef(null);
 
@@ -126,8 +126,7 @@ const PdfViewer = ({loader,setLoader,currentPage,setCurrentPage}) => {
 					containerRef.current.insertBefore(element, containerRef.current.firstChild);
 				} else if (wherToAppend === "END") {
 					if (ruler?.page == pageNum) {
-						
-						const rulerDiv = createAbsoluteDiv(ruler.position *( zoom/ruler.zoom));
+						const rulerDiv = createAbsoluteDiv(ruler.position * (zoom / ruler.zoom));
 						element.firstChild.appendChild(rulerDiv);
 						containerRef.current.appendChild(element);
 					} else {
@@ -139,7 +138,9 @@ const PdfViewer = ({loader,setLoader,currentPage,setCurrentPage}) => {
 			}
 		}
 	};
-
+	useEffect(() => {
+		containerRef.current.style.height = `${heightOfAllPage * zoom}px`;
+	}, [heightOfAllPage]);
 	// useEffect for inital load calculate the width and load 30 element 1st
 	useEffect(() => {
 		const renderAllPages = async () => {
@@ -658,10 +659,10 @@ const PdfViewer = ({loader,setLoader,currentPage,setCurrentPage}) => {
 					</div>
 					<div className="d-flex gap-1">
 						<div>
-							<i  onClick={()=>goToPage( 1 )} class="bi bi-caret-up" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="First Page"></i>
+							<i onClick={() => goToPage(1)} class="bi bi-caret-up" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="First Page"></i>
 						</div>
 						<div>
-							<i  onClick={()=>goToPage(currentPage-1 >= 0 ? currentPage-1 :1 )}class="bi bi-chevron-up" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Previous Page"></i>
+							<i onClick={() => goToPage(currentPage - 1 >= 0 ? currentPage - 1 : 1)} class="bi bi-chevron-up" style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Previous Page"></i>
 						</div>
 					</div>
 
@@ -682,10 +683,16 @@ const PdfViewer = ({loader,setLoader,currentPage,setCurrentPage}) => {
 
 					<div className="d-flex gap-1">
 						<div>
-							<i class="bi bi-chevron-down  " onClick={()=>goToPage( currentPage+1 < numPages ? currentPage+1 : numPages)} style={{ color: "white" ,cursor: "pointer" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Next Page"></i>
+							<i
+								class="bi bi-chevron-down  "
+								onClick={() => goToPage(currentPage + 1 < numPages ? currentPage + 1 : numPages)}
+								style={{ color: "white", cursor: "pointer" }}
+								data-bs-toggle="tooltip"
+								data-bs-placement="top"
+								data-bs-title="Next Page"></i>
 						</div>
 						<div>
-							<i class="bi bi-caret-down" onClick={()=>goToPage(numPages)} style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Last Page" ></i>
+							<i class="bi bi-caret-down" onClick={() => goToPage(numPages)} style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Last Page"></i>
 						</div>
 					</div>
 
@@ -698,7 +705,10 @@ const PdfViewer = ({loader,setLoader,currentPage,setCurrentPage}) => {
 								debouncedHandleZoomOut();
 							}}
 							class="bi bi-zoom-out"
-							style={{ color: "white" }} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Zoom Out"></i>
+							style={{ color: "white" }}
+							data-bs-toggle="tooltip"
+							data-bs-placement="top"
+							data-bs-title="Zoom Out"></i>
 					</div>
 				</div>
 
@@ -729,17 +739,13 @@ const PdfViewer = ({loader,setLoader,currentPage,setCurrentPage}) => {
 								zIndex: -1,
 								// backgroundColor: "black",
 							}}></div>
-							{loader && (
-								<div style={{position: "absolute",
-									top: "50%",
-									left:' 50%',
-									zIndex:"100",
-									transform: "translate(-50%, -50%)",}}>
-								<div class="spinner-border " role="status" style={{width: "3rem", height: "3rem", color :"#1ba2a8 " }}>
-								  <span class="sr-only"></span>
+						{loader && (
+							<div style={{ position: "absolute", top: "50%", left: " 50%", zIndex: "100", transform: "translate(-50%, -50%)" }}>
+								<div class="spinner-border " role="status" style={{ width: "3rem", height: "3rem", color: "#1ba2a8 " }}>
+									<span class="sr-only"></span>
 								</div>
-							  </div>
-							) }
+							</div>
+						)}
 
 						<div
 							ref={containerRef}
