@@ -6,11 +6,17 @@ import viteLogo from '/vite.svg'
 import 'bootstrap-icons/font/bootstrap-icons.css'; // Ensure you import the Bootstrap Icons CSS
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [loader, setLoader] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   return (
     <>
-    <PdfViewer/>
+    <PdfViewer
+     loader={loader}
+    setLoader={setLoader}
+    currentPage={currentPage}
+    setCurrentPage={setCurrentPage}
+    />
         
     </>
   )

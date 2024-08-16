@@ -9,10 +9,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.m
 // const largePdf = "https://api97.ilovepdf.com/v1/download/yv4Avpzwpstkn208tchlnAchqtxxssr10377b0jrbrh6AlxrAcly4zxwf8dps7vbgdc7lpAh8cdxj8jrwl93bnjt3gfnt507rn8hvh41vfp82x6xcnAd1x9smp6cvyx5jrdsbsbf9ksyx8dynhbxt07vw972wnkAmd0tfwrb59q7l3vbA2f1";
 const largePdf = "https://xtract-s3-local.s3.us-east-1.amazonaws.com/dummy_pdf/output%20-%2020230223.215.2222.31220020M.pdf.pdf";
 
-const PdfViewer = () => {
+const PdfViewer = ({loader,setLoader,currentPage,setCurrentPage}) => {
 	const [numPages, setNumPages] = useState(null);
 	const [pdf, setPdf] = useState(null);
-	const [currentPage, setCurrentPage] = useState(1);
+	// const [currentPage, setCurrentPage] = useState(1);
 	const [pageDetails, setPageDetails] = useState([]);
 	const [currentLoadPage, setCurrentLoadPage] = useState({});
 	const [DomActivePage, setDomActivePage] = useState([]);
@@ -176,6 +176,7 @@ const PdfViewer = () => {
 			containerRef.current.style.height = `${heightOfAllPage * zoom}px`;
 			setHeightOfAllPage(heightOfAllPage);
 			setHeightOfAllPageTemp(heightOfAllPage);
+			setLoader(false);
 		};
 
 		renderAllPages();
@@ -726,8 +727,19 @@ const PdfViewer = () => {
 								height: "1px",
 								width: "100%",
 								zIndex: -1,
-								backgroundColor: "black",
+								// backgroundColor: "black",
 							}}></div>
+							{loader && (
+								<div style={{position: "absolute",
+									top: "50%",
+									left:' 50%',
+									zIndex:"100",
+									transform: "translate(-50%, -50%)",}}>
+								<div class="spinner-border " role="status" style={{width: "3rem", height: "3rem", color :"#1ba2a8 " }}>
+								  <span class="sr-only"></span>
+								</div>
+							  </div>
+							) }
 
 						<div
 							ref={containerRef}
