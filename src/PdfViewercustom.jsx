@@ -44,26 +44,19 @@ const PdfViewer = () => {
 		loadDocument();
 	}, []);
 
-	const createpageAndAppendToDiv = async (pageNum, createpageAndAppendToDiv = 0) => {
+	const checkRotationReturnCanvas = async (pageNum, rotation = 0) => {
 		try {
 			const page = await pdf.getPage(parseInt(pageNum));
 			const viewport = page.getViewport({
 				scale: zoom,
-				rotation: createpageAndAppendToDiv,
+				rotation: rotation,
 			});
 			const canvas = document.createElement("canvas");
-			const rotation = 0;
-
-			if (rotation === 90 || rotation === 270 || rotation === -90 || rotation === -270) {
-				canvas.width = viewport.height;
-				canvas.height = viewport.width;
-			} else {
-				canvas.width = viewport.width;
-				canvas.height = viewport.height;
-			}
+			
+			canvas.width = viewport.width;
+			canvas.height = viewport.height;
 
 			const context = canvas.getContext("2d");
-
 			const renderContext = {
 				canvasContext: context,
 				viewport: viewport,
@@ -77,7 +70,7 @@ const PdfViewer = () => {
 			}
 			return { success: true, pageNumber: pageNum, element: canvas };
 		} catch (error) {
-			console.log("hiiiiiii");
+			console.log("returnCanvas:",error);
 		}
 	};
 
@@ -85,7 +78,7 @@ const PdfViewer = () => {
 	const renderPage = (page, pageNum) => {
 		return new Promise(async (resolve, reject) => {
 			try {
-				const element = await createpageAndAppendToDiv(pageNum, pageDetails[pageNum]?.rotation || 0);
+				const element = await checkRotationReturnCanvas(pageNum, pageDetails[pageNum]?.rotation || 0);
 				const canvas = element.element;
 				const pageContainer = document.createElement("div");
 				pageContainer.style.position = "relative";
@@ -135,7 +128,7 @@ const PdfViewer = () => {
 					}
 				}
 			} catch (err) {
-				console.log("checkpoint error:", err);
+				console.log("checkpoint appendChildElement:", err);
 			}
 		}
 	};
@@ -160,6 +153,9 @@ const PdfViewer = () => {
 					return updatedRotations;
 				});
 				heightOfAllPage = page._pageInfo.view[3] + heightOfAllPage;
+				// if(pageNum%200 ===0){
+				// 	console.log("i % 200:",pageNum)
+				// }
 			}
 			let validResponses = [];
 			for (let pageNum = 1; pageNum <= Math.min(30, numPages); pageNum++) {
@@ -190,16 +186,21 @@ const PdfViewer = () => {
 		const response = await renderPage("page", pageNumber)
 		if (response?.success === true) {
 			if (response?.success === true) {
-				const prevTopPosition = containerRef.current.offsetTop;
-				const topPosition = parseInt(pageDetails[parseInt(pageNumber)].height) * zoom + prevTopPosition;
-						
+				const container1 = document.getElementById('container1');
+				const computedStyle = window.getComputedStyle(container1);
+				const currentTop = parseInt (computedStyle.getPropertyValue('top').split('px')[0])
+				const currentHeight =  parseInt (computedStyle.getPropertyValue('height').split('px')[0])
+
+				const heightOfDeletedElement = containerRef.current.firstChild.offsetHeight
+				const newTop = parseInt(heightOfDeletedElement) + currentTop;
+
+				const heightOfCurrentPage = parseInt(pageDetails[parseInt(pageNumber)].height) * zoom 
 				const element = containerRef.current.childNodes
-				console.log('element',element)
-				if(position === 'END' && element.length ===30){
+				if(position === 'END' && element.length ===30){       //append the element to end delete the first Element >>>>>>>>>
 					containerRef.current.firstChild.remove()
 					containerRef.current.appendChild(response.element)
-					containerRef.current.style.height = `${heightOfAllPage * zoom - topPosition}px`;
-					containerRef.current.style.top = `${topPosition}px`;
+					containerRef.current.style.height = `${heightOfAllPage * zoom - newTop}px`;
+					containerRef.current.style.top = `${newTop}px`;
 					setDomActivePage((prev) => {
 						const updatedArray = [ ...prev,response.pageNumber];
 						updatedArray.shift();
@@ -208,9 +209,17 @@ const PdfViewer = () => {
 							
 				}
 				else if(position === 'START' && element.length ===30){
-					
+					containerRef.current.lastChild.remove();
+					containerRef.current.insertBefore(response.element, containerRef.current.firstChild);
+					containerRef.current.style.height = `${ heightOfAllPage * zoom - (currentTop -heightOfCurrentPage)  } px`;
+					containerRef.current.style.top = `${currentTop -heightOfCurrentPage}px`;
+					setDomActivePage((prev) => {
+						const updatedArray = [response.pageNumber, ...prev];
+						updatedArray.pop();
+						return updatedArray;
+					});
 				}
-				alert('element ...')
+				
 			}
 		}
 	} 
@@ -223,7 +232,6 @@ const PdfViewer = () => {
 				loadMissingPages(nextLoad+1)
 			}else{
 				loadMissingPages(nextLoad+1)
-				console.log("added element nextLoad  :",nextLoad)
 				appendToTheElement("START",nextLoad)
 			}
 
@@ -234,7 +242,6 @@ const PdfViewer = () => {
 			}
 			else{
 				loadMissingPages(nextLoad-1)
-				console.log("added element nextLoad  :",nextLoad)	
 				appendToTheElement("END",nextLoad)
 			}
 		}
@@ -244,7 +251,7 @@ const PdfViewer = () => {
 		
 	}
 
-	// use Effec for current page change
+	// use Effect for current page change
 
 	useEffect(() => {
 		let delayfunction = setTimeout(() => {
@@ -260,77 +267,6 @@ const PdfViewer = () => {
 		};
 	}, [currentPage]);
 
-	// give a page number and  where to append function
-
-	const renderSinglePages = async (nexToLoad, whereToRremove) => {
-		if (!pdf) return;
-		if (!document.getElementById(String(nexToLoad))) {
-			const page = await pdf.getPage(nexToLoad);
-			const response = await renderPage(page, nexToLoad, page._pageInfo.view[3], page._pageInfo.view[2]);
-
-			if (response?.success === true) {
-				if (whereToRremove === "START") {
-					appendChildElement(response.element, response.pageNumber, "END");
-					setDomActivePage((prev) => {
-						const updatedArray = [...prev];
-						updatedArray.shift();
-						updatedArray.push(response.pageNumber);
-						return updatedArray;
-					});
-					const element = containerRef.current.firstChild?.getAttribute("data-page-number");
-
-					if (parseInt(element) == parseInt(DomActivePage[0])) {
-						const prevTopPosition = containerRef.current.offsetTop;
-						const topPosition = parseInt(pageDetails[parseInt(element)].height) * zoom + prevTopPosition;
-						containerRef.current.style.height = `${heightOfAllPage * zoom - topPosition}px`;
-
-						if (response.pageNumber < 16) {
-							console.log("setting top 0...");
-							containerRef.current.style.height = `${heightOfAllPage * zoom}px`;
-							containerRef.current.style.top = `${0}px`;
-						}
-						// else if(pageNumber > numPages-16){
-						//   containerRef.current.style.height = `${heightOfAllPage-topPosition}px`;
-						//   containerRef.current.style.top = `${topPosition}px`;
-						// }
-						else {
-							containerRef.current.style.height = `${heightOfAllPage * zoom - topPosition}px`;
-							containerRef.current.style.top = `${topPosition}px`;
-						}
-						containerRef.current.removeChild(containerRef.current.firstChild);
-					}
-				}
-				if (whereToRremove === "END") {
-					const element = containerRef.current.lastChild?.getAttribute("data-page-number");
-
-					if (parseInt(element) == parseInt(DomActivePage[29])) {
-						const prevTopPosition = containerRef.current.offsetTop;
-						const topPosition = prevTopPosition - parseInt(pageDetails[parseInt(element)].height * zoom);
-						console.log(topPosition, "topPosition");
-						document.getElementById("container1").offsetHeight;
-						containerRef.current.style.height = `${heightOfAllPage * zoom + topPosition}px`;
-						console.log("document.getElementById('container1').offsetHeight", document.getElementById("container1").offsetHeight);
-
-						if (response.pageNumber == 1 || currentPage < 15) {
-							console.log("setting top 0...");
-							containerRef.current.style.height = `${heightOfAllPage * zoom}px`;
-							containerRef.current.style.top = `${0}px`;
-						} else {
-							containerRef.current.style.height = `${heightOfAllPage * zoom - topPosition}px`;
-							containerRef.current.style.top = `${topPosition}px`;
-						}
-						containerRef.current.removeChild(containerRef.current.lastChild);
-						setDomActivePage((prev) => {
-							const updatedArray = [response.pageNumber, ...prev];
-							updatedArray.pop();
-							return updatedArray;
-						});
-						appendChildElement(response.element, response.pageNumber, "START");
-					}
-				}
-			}
-		}
-	};
 
 	useEffect(() => {
 		console.log(DomActivePage, "DomActivePage");
@@ -350,18 +286,15 @@ const PdfViewer = () => {
 				nexToLoad = currentPage + 15;
 
 				whereToRremove = "START";
-				console.log("nexToLoad", nexToLoad, "index", index);
 			}
 		} else if (index < 13 && currentPage > 13 && currentPage < numPages - 15) {
 			//pop
 			// add to first
-			nexToLoad = currentPage - 13;
 			whereToRremove = "END";
-			console.log("nexToLoad", nexToLoad, "index", index);
 		}
 		if (nexToLoad && nexToLoad > 0 && !document.getElementById(String(nexToLoad))) {
 			loadMissingPages(nexToLoad)
-			renderSinglePages(nexToLoad, whereToRremove);
+			// renderSinglePages(nexToLoad, whereToRremove);
 		}
 	};
 
@@ -385,7 +318,7 @@ const PdfViewer = () => {
 		const canvasParentDiv = document.getElementById(String(currentPage));
 		canvasParentDiv.querySelector("canvas").remove();
 
-		createpageAndAppendToDiv(currentPage, newRotation);
+		checkRotationReturnCanvas(currentPage, newRotation);
 	};
 
 	const removeAllChildren = () => {
@@ -410,14 +343,12 @@ const PdfViewer = () => {
 			} else if (pageNumber > numPages - 16) {
 				// Load the last 30 pages
 				startPage = Math.max(1, numPages - 30);
-				console.log("Load the last 30 pages");
 				endPage = numPages;
 			} else {
 				// Load pages around the current page
 				startPage = pageNumber - 14;
 				endPage = pageNumber + 15;
 			}
-			console.log("startPage:", startPage, " endPage:", endPage);
 			for (let pageNum = startPage; pageNum <= endPage; pageNum++) {
 				if (!document.getElementById(String(pageNum))) {
 					const page = await pdf.getPage(pageNum);
@@ -449,7 +380,7 @@ const PdfViewer = () => {
 			}
 
 			for (let i = 1; i <= pageNumber; i++) {
-				const currentPageHeight = parseFloat(pageDetails[i].height * zoom);
+				const currentPageHeight = parseFloat(pageDetails[i].height);
 
 				pageHeight += currentPageHeight;
 
@@ -463,8 +394,9 @@ const PdfViewer = () => {
 			}
 
 			if (numPages < 31) {
+				
 				scrollDiv.scrollTo({
-					top: parseInt(scrollPosss),
+					top: parseInt(scrollPosss*zoom),
 					behavior,
 					// behavior: "smooth",
 				});
@@ -472,22 +404,22 @@ const PdfViewer = () => {
 			}
 
 			if (pageNumber < 16 || numPages < 31) {
-				console.log("setting top 0...");
 				containerRef.current.style.height = `${heightOfAllPage * zoom}px`;
 				containerRef.current.style.top = `${0}px`;
 			} else if (pageNumber > numPages - 16) {
-				console.log("pageNumber", pageNumber, "numPages", numPages);
 				for (let i = numPages; i >= numPages - 30; i--) {
 					temp += parseFloat(pageDetails[i].height * zoom);
 				}
 
-				console.log(numPages, "numPages");
 				containerRef.current.style.height = `${temp}px`;
 				containerRef.current.style.top = `${heightOfAllPage * zoom - temp}px`;
 			} else {
-				console.log("setting top  some ...");
-				containerRef.current.style.height = `${heightOfAllPage * zoom - parseInt(heightHistory[14])}px`;
-				containerRef.current.style.top = `${parseInt(heightHistory[14])}px`;
+				let index = 14
+				if(pageNumber<31){
+					index = pageNumber%16
+				}
+				containerRef.current.style.height = `${(heightOfAllPage - parseInt(heightHistory[index])) * zoom  }px`;
+				containerRef.current.style.top = `${parseInt(heightHistory[index]) * zoom }px`;
 			}
 
 			removeAllChildren();
@@ -496,7 +428,7 @@ const PdfViewer = () => {
 			const fillSetActivePage = await LoadPages(pageNumber, pdf);
 
 			scrollDiv.scrollTo({
-				top: parseInt(scrollPosss),
+				top: parseInt(scrollPosss*zoom),
 				behavior,
 				// behavior: "smooth",
 			});
@@ -567,7 +499,7 @@ const PdfViewer = () => {
 
 					const pageNum = firstChild?.getAttribute("id");
 
-					await createpageAndAppendToDiv(pageNum, pageDetails[pageNum]?.rotation);
+					await checkRotationReturnCanvas(pageNum, pageDetails[pageNum]?.rotation);
 				});
 			}
 		} catch (error) {
@@ -577,7 +509,8 @@ const PdfViewer = () => {
 	const [prevPage, setPrevPage] = useState(0);
 	const [performScale, setPreformScale] = useState(false);
 	useEffect(() => {
-		resetAllDomWidth(zoom);
+		// resetAllDomWidth(zoom);
+		
 		goToPage(prevPage);
 	}, [zoom, prevPage]);
 
@@ -597,7 +530,6 @@ const PdfViewer = () => {
 			SetZoom(zoomTemp);
 			setPreformScale(true);
 
-			console.log("zoom", zoomTemp);
 		}
 	};
 	function useDebounce(func, delay) {
@@ -639,7 +571,7 @@ const PdfViewer = () => {
 		const newDiv = document.createElement("div");
 
 		newDiv.style.position = "absolute";
-		newDiv.style.bottom = `${-bottom}px`;
+		newDiv.style.bottom = `${-bottom+40}px`;
 		newDiv.style.backgroundColor = "red";
 		newDiv.style.width = "100%";
 		newDiv.style.height = "5px";
@@ -665,15 +597,13 @@ const PdfViewer = () => {
 				cumulativeHeight += pageDetails[i].height * zoom;
 				if (cumulativeHeight > scrollTopValue + clickYViewport) {
 					clickedPage = i;
-					console.log("clicked on the div ", i, scrollTopValue + clickYViewport - cumulativeHeight);
 					break;
 				}
 			}
 			const bottom = scrollTopValue + clickYViewport - cumulativeHeight;
 			const ruler = createAbsoluteDiv(bottom);
-			setRuler({ page: clickedPage, position: bottom, zoom: zoom });
+			setRuler({ page: clickedPage, position: bottom, zoom: zoom ,scrollTop:scrollTopValue + clickYViewport });
 			document.getElementById(String(clickedPage)).appendChild(ruler);
-			console.log(`The vertical scroll position is: ${scrollTopValue}px ${clickYViewport}`);
 		}
 	};
 
@@ -681,7 +611,13 @@ const PdfViewer = () => {
 		const handleKeyDown = (event) => {
 			if (event.altKey && event.keyCode === 71) {
 				if (ruler?.page) {
-					setCurrentPage(ruler?.page)
+					scrollDiv.scrollTo({
+						top: parseInt(ruler.scrollTop*zoom - 200),
+						behavior:"smooth",
+						block:"center"
+						// behavior: "smooth",
+					});
+					// setCurrentPage(ruler?.page)
 				} else {
 					console.log("Element not found");
 				}
@@ -693,7 +629,7 @@ const PdfViewer = () => {
 		return () => {
 			window.removeEventListener("keydown", handleKeyDown);
 		};
-	}, [ruler]);
+	}, [ruler ,zoom]);
 
 	return (
 		<>
