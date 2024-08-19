@@ -509,24 +509,24 @@ const PdfViewer = () => {
 		}
 	};
 
-	const handleScroll = (e) => {
-		if (scrollTrackerRef.current) {
-			const rect = scrollTrackerRef.current.getBoundingClientRect();
-			const containerRect = containerRef.current.getBoundingClientRect();
-			const offsetTop = Math.abs(containerRect.top - rect.top);
-			let cumulativeHeight = 0;
-			const containerTop = document.getElementById("scrollDiv").offsetTop;
-			for (let i = 1; i <= numPages; i++) {
-				cumulativeHeight += pageDetails[i].height;
-				if (offsetTop < cumulativeHeight - containerTop) {
-					setCurrentPage(i);
-					break;
-				}
-			}
-		}
-	};
+	// const handleScroll = (e) => {
+	// 	if (scrollTrackerRef.current) {
+	// 		const rect = scrollTrackerRef.current.getBoundingClientRect();
+	// 		const containerRect = containerRef.current.getBoundingClientRect();
+	// 		const offsetTop = Math.abs(containerRect.top - rect.top);
+	// 		let cumulativeHeight = 0;
+	// 		const containerTop = document.getElementById("scrollDiv").offsetTop;
+	// 		for (let i = 1; i <= numPages; i++) {
+	// 			cumulativeHeight += pageDetails[i].height;
+	// 			if (offsetTop < cumulativeHeight - containerTop) {
+	// 				setCurrentPage(i);
+	// 				break;
+	// 			}
+	// 		}
+	// 	}
+	// };
 
-	const handleScrollTemp = (e) => {
+	const handleScroll = (e) => {
 		e.preventDefault();
 		if (scrollTrackerRef.current) {
 			const scrollPosition = e.target.scrollTop;
@@ -771,7 +771,7 @@ const PdfViewer = () => {
 						justifyContent: "center",
 					}}>
 					<div
-						onScroll={handleScrollTemp}
+						onScroll={handleScroll}
 						onDoubleClick={handleDoubleClick}
 						id="scrollDiv"
 						style={{
