@@ -3,9 +3,7 @@ import PdfViewer from './PdfViewercustom'
 import * as pdfjs from "pdfjs-dist";
 
 import 'bootstrap-icons/font/bootstrap-icons.css'; // Ensure you import the Bootstrap Icons CSS
-const largePdf = "https://api63.ilovepdf.com/v1/download/dhcxq96fb6h94vs37wmzl3433A5fky0tlj91A26k0hl864fscdnf6hxvg28s1c49xs6gbynhyr9n0qsAfyk0r4dfv7d0yflb314pq0141f3snj6j49h0xlqzy8bA4zwrbmtncyj0b279hqttpkntd03yvpmscy8p95v976Ahsvv7lpqzpw81	";
-// const largePdf = "https://xtract-s3-local.s3.us-east-1.amazonaws.com/dummy_pdf/output%20-%2020230223.215.2222.31220020M.pdf.pdf";
-
+const largePdf =  'https://xtract-s3-local.s3.amazonaws.com/media/assets/sftp_files/36/2024-08-23/08-54-02/split_file/20230223.215.2222.31220013M.pdf?AWSAccessKeyId=AKIAZLO3CEUCADU6MMBT&Signature=SHgXN4wSlENOIaxrgC3SRcW62Pc%3D&Expires=1724407445'
 function App() {
   const [loader, setLoader] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
