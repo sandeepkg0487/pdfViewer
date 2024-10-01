@@ -224,7 +224,7 @@ const PdfViewer = ({ loader, setLoader, currentPage, setCurrentPage, numPages, p
 					}
 				}
 				if (whereToRremove === "END") {
-					const element = containerRef.current.lastChild?.getAttribute("data-page-number");
+					const element =  containerRef.current.lastChild?.getAttribute("data-page-number");
 
 					if (parseInt(element) == parseInt(DomActivePage[29])) {
 						const prevTopPosition = containerRef.current.offsetTop;
