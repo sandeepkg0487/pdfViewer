@@ -223,7 +223,7 @@ const PdfViewer = ({ loader, setLoader, currentPage, setCurrentPage, numPages, p
 						containerRef.current.removeChild(containerRef.current.firstChild);
 					}
 				}
-				if (whereToRremove === "END") {
+				if (whereToRremove  === "END") {
 					const element = containerRef.current.lastChild?.getAttribute("data-page-number");
 
 					if (parseInt(element) == parseInt(DomActivePage[29])) {
